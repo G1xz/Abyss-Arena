@@ -24,7 +24,9 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
   },
 });
 
-/** Permite que testes injetem um cliente apontando para o banco de teste. */
-export function setPrismaClient(client: PrismaClient) {
-  globalForPrisma.__abyssPrisma = client;
+/** Encerra e descarta o cliente global (o próximo uso cria um novo). Usado por testes e scripts. */
+export async function resetPrismaClient() {
+  const client = globalForPrisma.__abyssPrisma;
+  globalForPrisma.__abyssPrisma = undefined;
+  await client?.$disconnect();
 }

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Tema escuro único (identidade competitiva). Tokens no padrão shadcn/ui. */
+:root {
+  color-scheme: dark;
+  --radius: 0.65rem;
+  --background: oklch(0.155 0.018 265);
+  --foreground: oklch(0.95 0.008 265);
+  --card: oklch(0.195 0.022 265);
+  --card-foreground: oklch(0.95 0.008 265);
+  --popover: oklch(0.205 0.024 265);
+  --popover-foreground: oklch(0.95 0.008 265);
+  --primary: oklch(0.68 0.17 285);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.255 0.026 265);
+  --secondary-foreground: oklch(0.93 0.01 265);
+  --muted: oklch(0.235 0.022 265);
+  --muted-foreground: oklch(0.7 0.02 265);
+  --accent: oklch(0.28 0.04 285);
+  --accent-foreground: oklch(0.96 0.01 285);
+  --destructive: oklch(0.63 0.21 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.3 0.025 265);
+  --input: oklch(0.32 0.025 265);
+  --ring: oklch(0.68 0.17 285);
+  --gold: oklch(0.83 0.14 85);
+  --ban: oklch(0.63 0.21 25);
+  --pick: oklch(0.78 0.13 175);
+  --success: oklch(0.74 0.16 150);
+  --warning: oklch(0.8 0.15 75);
+}
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-ban: var(--ban);
+  --color-pick: var(--pick);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-pyro: #ef7a35;
+  --color-hydro: #4cc2f1;
+  --color-anemo: #5fd4b0;
+  --color-electro: #b98bf0;
+  --color-dendro: #9fd03b;
+  --color-cryo: #9fe0f0;
+  --color-geo: #f5b93a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 85% -10%, oklch(0.32 0.09 285 / 0.35), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, oklch(0.3 0.07 240 / 0.25), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading), var(--font-body), ui-sans-serif, sans-serif;
+    letter-spacing: 0.01em;
+  }
+  ::selection {
+    background: oklch(0.68 0.17 285 / 0.4);
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
