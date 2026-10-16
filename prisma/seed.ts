@@ -113,38 +113,35 @@ async function seedAbyssFromWiki() {
 }
 
 /** Garante o ciclo vigente e o seguinte (que assume automaticamente quando sua data chega). */
-async function seedCycle() {
+/**
+ * Reserva: só cria o ciclo vigente à mão quando a wiki não trouxe nenhum (sem internet, testes).
+ * Os ciclos seguintes chegam sozinhos pela sincronização com a wiki.
+ */
+async function seedCycleFallback() {
   const { start, end } = currentCycleWindow(new Date());
-  const next = new Date(end);
-  next.setUTCMonth(next.getUTCMonth() + 1);
-  for (const [startsAt, endsAt] of [
-    [start, end],
-    [end, next],
-  ] as const) {
-    const exists = await prisma.abyssCycle.findFirst({ where: { status: "ACTIVE", startsAt: { lte: startsAt }, endsAt: { gt: startsAt } } });
-    if (exists) continue;
-    const name = `Abismo ${startsAt.toISOString().slice(0, 7)}`;
-    await prisma.abyssCycle.create({
-      data: {
-        name,
-        startsAt,
-        endsAt,
-        rules: DEFAULT_RULES,
-        challenges: {
-          create: [1, 2, 3].flatMap((chamber) => (["FIRST", "SECOND"] as const).map((half) => ({ floor: 12, chamber, half, enabled: true }))),
-        },
+  const exists = await prisma.abyssCycle.findFirst({ where: { status: "ACTIVE", startsAt: { lte: start }, endsAt: { gt: start } } });
+  if (exists) return;
+  const name = `Abismo ${start.toISOString().slice(0, 7)}`;
+  await prisma.abyssCycle.create({
+    data: {
+      name,
+      startsAt: start,
+      endsAt: end,
+      rules: DEFAULT_RULES,
+      challenges: {
+        create: [1, 2, 3].flatMap((chamber) => (["FIRST", "SECOND"] as const).map((half) => ({ floor: 12, chamber, half, enabled: true }))),
       },
-    });
-    console.log(`[seed] ciclo criado: ${name}`);
-  }
+    },
+  });
+  console.log(`[seed] ciclo criado à mão (wiki indisponível): ${name}`);
 }
 
 async function main() {
   const adminId = await seedAdmin();
   await seedCatalog();
   await seedPrices(adminId);
-  await seedCycle();
   await seedAbyssFromWiki();
+  await seedCycleFallback();
   if (process.env.SEED_DEMO_DATA === "true") {
     await seedDemoData();
     await ensureDemoAccounts();

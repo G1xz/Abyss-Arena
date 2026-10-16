@@ -2,7 +2,7 @@
  * Dados de demonstração (apenas desenvolvimento; ative com SEED_DEMO_DATA=true).
  * Jogadores, decks e partidas são criados pelos MESMOS serviços usados pela aplicação,
  * garantindo que tudo respeite as regras (orçamento, turnos, confirmação bilateral).
- * Metade das partidas é movida para um ciclo anterior para alimentar o histórico.
+ * Metade das partidas é movida para o mês anterior (fora do ciclo vigente) para alimentar o histórico.
  */
 import { randomBytes } from "node:crypto";
 import { hashPassword } from "@/server/auth/password";
@@ -13,7 +13,7 @@ import { confirmOpponentResult, submitResult } from "@/server/matches/results";
 import { createRoom, joinRoom, performDraftAction, setReady, startDraft } from "@/server/matches/service";
 import { getMatchView } from "@/server/matches/view";
 import { getActivePriceVersion, getCompetitivePriceMap } from "@/server/pricing/service";
-import { DEFAULT_RULES, getCurrentCycle } from "@/server/abyss/service";
+import { getCurrentCycle } from "@/server/abyss/service";
 
 const DEMO_PLAYERS = ["Kaeyaenjoyer", "PyroMain", "Speedrunner", "AbyssDiver", "HydroQueen", "GeoTank"];
 /** Personagens "fortes" na simulação, para gerar sinais visíveis no balanceamento. */
@@ -162,30 +162,18 @@ export async function seedDemoData() {
     matchIds.push(room.id);
   }
 
-  // Move a primeira metade das partidas para um ciclo anterior (histórico).
+  // A primeira metade das partidas vai para o mês anterior, fora do ciclo vigente (alimenta o histórico).
   const current = await getCurrentCycle();
   if (current) {
     const prevStart = new Date(current.startsAt);
     prevStart.setUTCMonth(prevStart.getUTCMonth() - 1);
-    const previous = await prisma.abyssCycle.create({
-      data: {
-        name: `Abismo ${prevStart.toISOString().slice(0, 7)} (demo)`,
-        startsAt: prevStart,
-        endsAt: current.startsAt,
-        rules: DEFAULT_RULES,
-        status: "ENDED",
-        challenges: {
-          create: [1, 2, 3].flatMap((chamber) => (["FIRST", "SECOND"] as const).map((half) => ({ floor: 12, chamber, half, enabled: true }))),
-        },
-      },
-    });
     const old = matchIds.slice(0, TOTAL / 2);
     const spacing = (current.startsAt.getTime() - prevStart.getTime()) / (old.length + 1);
     for (const [i, id] of old.entries()) {
       const when = new Date(prevStart.getTime() + (i + 1) * spacing);
       await prisma.match.update({
         where: { id },
-        data: { abyssCycleId: previous.id, createdAt: when, draftStartedAt: when, lockedAt: when, completedAt: when },
+        data: { abyssCycleId: null, createdAt: when, draftStartedAt: when, lockedAt: when, completedAt: when },
       });
     }
   }
