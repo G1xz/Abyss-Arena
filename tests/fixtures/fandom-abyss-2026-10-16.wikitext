@@ -1,0 +1,57 @@
+{{Abyssal Moon Spire
+|startVersion   = 7.1
+|start          = 2026-10-16
+|end            = 2026-11-15
+|prev           = 2026-09-16
+|next           = 2026-11-16
+|floor11Changed = 1
+|floor12Changed = 1
+}}
+
+==Blessings of the Abyssal Moon==
+{{Blessing of the Abyssal Moon Schedule}}
+
+==Abyssal Moon Spire==
+===Floor 11===
+* '''Ley Line Disorder'''
+** All party members gain a 60% Anemo DMG Bonus.
+** All party members gain a 60% Cryo DMG Bonus.
+
+{{Domain Enemies
+|level1      = 88
+|target1     = Target defense progress greater than (20/40/60)%.
+|enemies1_1  = Oprichniki Grenadier*?; Oprichniki Line Trooper *?; Close Combat Storm Landcruiser*?; Force Recon Scout Landcruiser*?; Close Combat Scout Landcruiser*?; Force Recon Ground Effect Landcruiser*?<!-- total: 24 -->
+|enemies1_2  = Large Hydro Slime*24
+|note1       = ''First Half:'' {{Tx}}<br>''Second Half:'' Initially spawns Large Hydro Slime x3; more spawn as the previous are defeated.
+|level2      = 90
+|target2     = Remaining challenge time longer than (60/180/300) sec.
+|enemies2_1  = Hydro Hilichurl Rogue*2// Radiant Bladehorn
+|enemies2_2  = Rockfond Rifthound*2; Thundercraven Rifthound*2
+|note2       = ''Second Half:'' Initially spawns Rockfond Rifthound x1 and Thundercraven Rifthound x1; more spawn as the previous are defeated.
+|level3      = 92
+|target3     = Remaining challenge time longer than (180/300/420) sec.
+|enemies3_1  = Oprichniki Thunderblitz Gvardiya// Oprichniki Fireblade Shock Trooper// Radiant Antelope
+|enemies3_2  = Millennial Pearl Seahorse
+}}
+
+===Floor 12===
+* '''Ley Line Disorder'''
+** {{Color|menu|First Half}}: Characters' Stellar Glimmer reaction DMG increased by 75%.
+** {{Color|menu|Second Half}}: All party members gain a 75% Cryo DMG Bonus.
+
+{{Domain Enemies
+|level1      = 95
+|target1     = Remaining challenge time longer than (180/300/420) sec.
+|enemies1_1  = Battle-Hardened Chimeric Volkodlak Archer
+|enemies1_2  = Iniquitous Baptist - Caller of Flood, Flame, and Fulmination// Shadowy Husk: Standard Bearer; Shadowy Husk: Defender
+|note1       = 
+|level2      = 98
+|target2     = Remaining challenge time longer than (180/300/420) sec.
+|enemies2_1  = Radiant Moonfly
+|enemies2_2  = Battle-Hardened Elite Treasure Hoarder
+|note2       = 
+|level3      = 100
+|target3     = Remaining challenge time longer than (180/300/420) sec.
+|enemies3_1  = Chimeric Winged Lion
+|enemies3_2  = Secret Source Automaton: Overseer Device
+}}

@@ -2,14 +2,31 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Save } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge, Label, NativeSelect, Textarea } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/overlays";
 import { cn, formatDate } from "@/lib/utils";
-import { addChallengeAction, createCycleAction, toggleChallengeAction, updateCycleAction } from "../actions";
+import { AbyssFloorView, type AbyssChallengeView } from "@/components/abyss-view";
+import { addChallengeAction, createCycleAction, syncAbyssAction, toggleChallengeAction, updateCycleAction } from "../actions";
+import { ActionButton } from "../admin-ui";
+
+const SYNC_STATUS: Record<string, string> = { created: "criado", updated: "atualizado", adopted: "vinculado ao ciclo existente", missing: "ainda não publicado na wiki" };
+
+export function SyncAbyssButton() {
+  return (
+    <ActionButton
+      variant="outline"
+      action={syncAbyssAction}
+      data-testid="sync-abyss"
+      success={(d) => (d as { key: string; status: string }[]).map((r) => `${r.key}: ${SYNC_STATUS[r.status] ?? r.status}`).join(" · ")}
+    >
+      <RefreshCw /> Sincronizar com a wiki agora
+    </ActionButton>
+  );
+}
 
 const toLocalInput = (iso: string) => {
   const d = new Date(iso);
@@ -87,7 +104,9 @@ interface CycleData {
   rules: string;
   status: "ACTIVE" | "ENDED";
   matches: number;
-  challenges: { id: string; floor: number; chamber: number; half: "FIRST" | "SECOND"; enabled: boolean }[];
+  source: "MANUAL" | "WIKI";
+  syncedAt: string | null;
+  challenges: (AbyssChallengeView & { id: string; enabled: boolean })[];
 }
 
 export function CycleCard({ cycle, current }: { cycle: CycleData; current: boolean }) {
@@ -111,10 +130,12 @@ export function CycleCard({ cycle, current }: { cycle: CycleData; current: boole
         <CardTitle className="flex flex-wrap items-center gap-2">
           {cycle.name}
           {current && <Badge>vigente</Badge>}
+          <Badge variant="outline">{cycle.source === "WIKI" ? "wiki" : "manual"}</Badge>
           <Badge variant={cycle.status === "ACTIVE" ? "success" : "secondary"}>{cycle.status === "ACTIVE" ? "ativo" : "encerrado"}</Badge>
         </CardTitle>
         <CardDescription>
           {formatDate(cycle.startsAt)} → {formatDate(cycle.endsAt)} · {cycle.matches} partida(s)
+          {cycle.syncedAt && ` · sincronizado em ${formatDate(cycle.syncedAt)}`}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
@@ -130,6 +151,14 @@ export function CycleCard({ cycle, current }: { cycle: CycleData; current: boole
               </label>
             ))}
           </div>
+          {cycle.challenges.some((c) => c.enemies?.length) && (
+            <details className="mt-3 rounded-lg border bg-background/30 p-3" open={current}>
+              <summary className="cursor-pointer text-sm font-medium">Inimigos e perturbações (andar 12)</summary>
+              <div className="mt-3">
+                <AbyssFloorView challenges={cycle.challenges.filter((c) => c.enemies?.length)} compact />
+              </div>
+            </details>
+          )}
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <Input type="number" min={1} max={12} className="w-20" aria-label="Andar" value={add.floor} onChange={(e) => setAdd({ ...add, floor: Number(e.target.value) })} />
             <Input type="number" min={1} max={3} className="w-20" aria-label="Câmara" value={add.chamber} onChange={(e) => setAdd({ ...add, chamber: Number(e.target.value) })} />

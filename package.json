@@ -21,7 +21,8 @@
     "balance:run": "tsx scripts/run-balance.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "abyss:sync": "tsx scripts/sync-abyss.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

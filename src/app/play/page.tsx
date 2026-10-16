@@ -11,6 +11,7 @@ import { requireUser } from "@/server/auth/next";
 import { listUserDecks } from "@/server/decks/service";
 import { getPlayableContacts, listInvites } from "@/server/invites/service";
 import { getSettings } from "@/server/settings";
+import { AbyssFloorView, type AbyssEnemyView } from "@/components/abyss-view";
 import { PlayPanel } from "./play-panel";
 
 export const metadata: Metadata = { title: "Jogar" };
@@ -72,23 +73,47 @@ export default async function PlayPage() {
             </p>
             <p className="font-mono text-xs break-words text-muted-foreground">{formatSequence(settings.draft.sequence)}</p>
             {cycle && (
-              <div>
-                <p className="font-medium">{cycle.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDate(cycle.startsAt, false)} – {formatDate(cycle.endsAt, false)}
-                </p>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {challenges.map((c) => (
-                    <li key={c.id} className="rounded border bg-background/50 px-2 py-0.5 text-xs">
-                      {c.floor}-{c.chamber} · {halfLabel(c.half)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <p>
+                <span className="text-muted-foreground">Abismo:</span> {cycle.name} ({formatDate(cycle.startsAt, false)} – {formatDate(cycle.endsAt, false)})
+              </p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {cycle && (
+        <Card className="mt-6" data-testid="abyss-current">
+          <CardHeader>
+            <CardTitle>Abismo vigente · andar 12</CardTitle>
+            <CardDescription>
+              {cycle.name}. Metades marcadas como válidas pela administração; a sala congela essas regras quando é criada.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {challenges.some((c) => Array.isArray(c.enemies) && c.enemies.length) ? (
+              <AbyssFloorView
+                challenges={challenges.map((c) => ({
+                  floor: c.floor,
+                  chamber: c.chamber,
+                  half: c.half,
+                  enemyLevel: c.enemyLevel,
+                  target: c.target,
+                  leyLineDisorder: c.leyLineDisorder,
+                  enemies: c.enemies as AbyssEnemyView[] | null,
+                }))}
+              />
+            ) : (
+              <ul className="flex flex-wrap gap-1.5">
+                {challenges.map((c) => (
+                  <li key={c.id} className="rounded border bg-background/50 px-2 py-0.5 text-xs">
+                    {c.floor}-{c.chamber} · {halfLabel(c.half)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </PageContainer>
   );
 }

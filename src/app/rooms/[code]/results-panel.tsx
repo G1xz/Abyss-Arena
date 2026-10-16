@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, ExternalLink, Flag, Loader2, Plus, Send, Trophy } from "lucide-react";
+import { AbyssFloorView } from "@/components/abyss-view";
 import { CharacterIcon, ConstellationBadge } from "@/components/character-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,16 +61,20 @@ export function RulesCard({ ctx }: { ctx: RoomContext }) {
   const rules = ctx.state.rules;
   if (!rules) return null;
   return (
-    <div className="rounded-xl border bg-card/60 p-4 text-sm">
-      <p className="font-display font-semibold">{rules.cycleName}</p>
-      <ul className="mt-2 flex flex-wrap gap-1.5">
-        {rules.challenges.map((c) => (
-          <li key={`${c.floor}-${c.chamber}-${c.half}`} className="rounded border bg-background/50 px-2 py-0.5 text-xs">
-            Andar {c.floor} · Câmara {c.chamber} · {HALF[c.half]}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-3 text-xs whitespace-pre-line text-muted-foreground">{rules.rules}</p>
+    <div className="grid gap-3 rounded-xl border bg-card/60 p-4 text-sm" data-testid="abyss-rules">
+      <p className="font-display font-semibold">{rules.cycleName} · salas valendo nesta partida</p>
+      {rules.challenges.some((c) => c.enemies?.length) ? (
+        <AbyssFloorView challenges={rules.challenges} compact />
+      ) : (
+        <ul className="flex flex-wrap gap-1.5">
+          {rules.challenges.map((c) => (
+            <li key={`${c.floor}-${c.chamber}-${c.half}`} className="rounded border bg-background/50 px-2 py-0.5 text-xs">
+              Andar {c.floor} · Câmara {c.chamber} · {HALF[c.half]}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-xs whitespace-pre-line text-muted-foreground">{rules.rules}</p>
     </div>
   );
 }

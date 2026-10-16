@@ -55,6 +55,7 @@ A aplicação fica em `http://localhost:3000`. Para colocar em produção numa V
 | `npm run db:seed` | Seed idempotente |
 | `npm run catalog:sync` | Sincroniza personagens com a API comunitária |
 | `npm run balance:run [-- --proposals]` | Calcula métricas (e opcionalmente propostas) sem alterar preços |
+| `npm run abyss:sync` | Sincroniza o ciclo vigente e o próximo do Abismo com a wiki |
 | `npm test` | Testes unitários e de integração (sobe PostgreSQL embutido sozinho) |
 | `npm run test:e2e` | E2E com Playwright (exige `npm run build` antes) |
 | `npm run typecheck` | TypeScript sem emitir arquivos |
@@ -96,4 +97,4 @@ deploy/Caddyfile          proxy reverso com HTTPS automático
 - Constelação e nível dos personagens são **declarados** pelo jogador (importados do HoYoLAB ou editados à mão), sem verificação.
 - O UID do Genshin informado no perfil é exibido como **não verificado**.
 - Links de evidência são apenas informativos e não são verificados automaticamente.
-- Dados de personagens: [Project Amber / yatta.moe](https://gi.yatta.moe), com [genshin.jmp.blue](https://genshin.jmp.blue) como alternativa. Projeto de fãs, sem afiliação com a HoYoverse.
+- Dados de personagens e inimigos: [Project Amber / yatta.moe](https://gi.yatta.moe), com [genshin.jmp.blue](https://genshin.jmp.blue) como alternativa. Ciclos do Abismo: [Genshin Impact Wiki (Fandom)](https://genshin-impact.fandom.com/wiki/Spiral_Abyss), conteúdo sob CC BY-SA. Projeto de fãs, sem afiliação com a HoYoverse.

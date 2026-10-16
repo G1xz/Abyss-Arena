@@ -1,0 +1,63 @@
+{
+ "response": 200,
+ "data": {
+  "items": {
+   "22070101": {
+    "id": 22070101,
+    "name": "Armadura do Vazio: Porta-estandarte",
+    "type": "ABYSS",
+    "icon": "UI_MonsterIcon_ForlornVessel_Strong_Warbanner_Fire",
+    "route": "Shadowy Husk: Standard Bearer"
+   },
+   "22070301": {
+    "id": 22070301,
+    "name": "Armadura do Vazio: Defensor",
+    "type": "ABYSS",
+    "icon": "UI_MonsterIcon_ForlornVessel_Strong_Chargebow_Ice",
+    "route": "Shadowy Husk: Defender"
+   },
+   "22100501": {
+    "id": 22100501,
+    "name": "Batizador Iníquo",
+    "type": "ABYSS",
+    "icon": "UI_MonsterIcon_Invoker_Archdeacon",
+    "route": "Iniquitous Baptist"
+   },
+   "24090501": {
+    "id": 24090501,
+    "name": "Autômato da Fonte Secreta: Dispositivo Supervisor",
+    "type": "AUTOMATRON",
+    "icon": "UI_MonsterIcon_DragonCollar",
+    "route": "Secret Source Automaton: Overseer Device"
+   },
+   "26180101": {
+    "id": 26180101,
+    "name": "Cavalo-marinho Perolado Milenar",
+    "type": "BEAST",
+    "icon": "UI_MonsterIcon_SeaHorse_Primo_Electric",
+    "route": "Millennial Pearl Seahorse"
+   },
+   "26300101": {
+    "id": 26300101,
+    "name": "Antílope Radiante",
+    "type": "BEAST",
+    "icon": "UI_MonsterIcon_Magbeast_Argali",
+    "route": "Radiant Antelope"
+   },
+   "26301101": {
+    "id": 26301101,
+    "name": "Borboleta Fantasmagórica do Véu Lunar",
+    "type": "BEAST",
+    "icon": "UI_MonsterIcon_Magbeast_Pergesa",
+    "route": "Radiant Moonfly"
+   },
+   "26310501": {
+    "id": 26310501,
+    "name": "Leão Alado Quimérico",
+    "type": "BEAST",
+    "icon": "UI_MonsterIcon_Chimera_Manticore",
+    "route": "Chimeric Winged Lion"
+   }
+  }
+ }
+}

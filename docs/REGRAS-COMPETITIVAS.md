@@ -53,7 +53,8 @@ Cada jogador pode ter no máximo 3 partidas ativas ao mesmo tempo.
 
 ## Partida no Abismo
 
-- O administrador define o **ciclo do Abismo** (nome, datas, andar, regras) e quais **câmaras e metades** valem para o formato. A sala congela essas regras na criação.
+- O **ciclo do Abismo** é sincronizado automaticamente da wiki do Fandom: andar 12 com inimigos, nível, meta e perturbação de cada metade. O ciclo novo entra em vigor sozinho na virada do Abismo (dia 16, 04:00 do servidor América, 06:00 de Brasília).
+- O administrador escolhe quais **câmaras e metades** valem para o formato e pode cadastrar ciclos à mão. A sala congela essas regras e os dados do andar na criação; elas aparecem no lobby e durante a partida.
 - Os dois jogadores fazem a mesma seleção de desafios no Genshin, usando apenas os 8 personagens escolhidos no draft (4 em cada metade).
 - Cada jogador registra o **tempo total**, em `m:ss.mmm` ou segundos com decimais, e opcionalmente até 5 links de evidência.
 - O tempo precisa estar dentro dos limites configurados (padrão: 5 s a 60 min).

@@ -13,6 +13,6 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 120_000,
-    env: { RATE_LIMIT_DISABLED: "true", JOBS_ENABLED: "false" },
+    env: { RATE_LIMIT_DISABLED: "true", JOBS_ENABLED: "false", ABYSS_SYNC_ENABLED: "false" },
   },
 });

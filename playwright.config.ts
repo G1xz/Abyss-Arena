@@ -52,6 +52,7 @@ export default defineConfig({
       SESSION_COOKIE_SECURE: "false",
       JOBS_ENABLED: "false",
       CATALOG_SYNC_ENABLED: "false",
+      ABYSS_SYNC_ENABLED: "false",
     },
   },
 });

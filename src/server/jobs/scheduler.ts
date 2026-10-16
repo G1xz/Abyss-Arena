@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { publishDueScheduledVersions } from "../pricing/service";
 import { getSettings } from "../settings";
 import { writeAuditLog } from "../audit";
+import { abyssSyncPeriod, syncAbyss } from "../abyss/sync";
 
 const TICK_MS = 10 * 60 * 1000;
 const RETRY_AFTER_MS = 60 * 60 * 1000;
@@ -61,6 +62,11 @@ export async function runScheduledJobs(now = new Date()) {
     if (now.getUTCDay() === settings.proposalWeekday) {
       await runJobOnce("balance:weekly-proposals", today, () => runBalanceAnalysis({ kind: "WEEKLY", generateProposals: true, now }));
     }
+  }
+
+  // Ciclos do Abismo (andar 12) vindos da wiki: o ciclo novo entra sozinho na virada.
+  if (process.env.ABYSS_SYNC_ENABLED !== "false") {
+    await runJobOnce("abyss:sync", await abyssSyncPeriod(now), () => syncAbyss({ now }));
   }
 
   if (process.env.CATALOG_SYNC_ENABLED !== "false") {

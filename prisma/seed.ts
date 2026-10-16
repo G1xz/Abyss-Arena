@@ -8,7 +8,9 @@
  *  - SEED_DEMO_DATA=true: jogadores, decks e partidas de demonstração criados pelos fluxos reais.
  */
 import "dotenv/config";
-import { DEFAULT_RULES } from "@/server/abyss/service";
+import { abyssResetAt, cycleKeysAround } from "@/domain/abyss-wiki";
+import { DEFAULT_RULES, LEGACY_DEFAULT_RULES } from "@/server/abyss/service";
+import { syncAbyss } from "@/server/abyss/sync";
 import { hashPassword } from "@/server/auth/password";
 import { JmpCatalogProvider } from "@/server/catalog/jmp";
 import { SnapshotCatalogProvider } from "@/server/catalog/snapshot";
@@ -90,13 +92,24 @@ async function seedPrices(adminId: string | null) {
   }
 }
 
-/** Ciclos do Abismo renovam no dia 16 de cada mês. */
+/** Ciclos do Abismo renovam no dia 16 de cada mês, às 04:00 do servidor (padrão: América, UTC-5). */
 export function currentCycleWindow(now = new Date()) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 16, 4));
-  if (now < start) start.setUTCMonth(start.getUTCMonth() - 1);
-  const end = new Date(start);
-  end.setUTCMonth(end.getUTCMonth() + 1);
-  return { start, end };
+  const offset = Number(process.env.ABYSS_SERVER_UTC_OFFSET ?? -5);
+  const { current, next } = cycleKeysAround(now, offset);
+  return { start: abyssResetAt(current, offset), end: abyssResetAt(next, offset) };
+}
+
+/** Tenta preencher o andar 12 a partir da wiki (inimigos, perturbações). Sem internet, segue com o ciclo manual. */
+async function seedAbyssFromWiki() {
+  const updated = await prisma.abyssCycle.updateMany({ where: { rules: LEGACY_DEFAULT_RULES }, data: { rules: DEFAULT_RULES } });
+  if (updated.count) console.log(`[seed] regras padrão atualizadas para o formato de 8 picks em ${updated.count} ciclo(s).`);
+  if (process.env.SEED_OFFLINE === "true" || process.env.ABYSS_SYNC_ENABLED === "false") return;
+  try {
+    const results = await syncAbyss();
+    console.log(`[seed] Abismo (wiki): ${results.map((r) => `${r.key} ${r.status}`).join(", ")}`);
+  } catch (err) {
+    console.warn("[seed] não foi possível sincronizar o Abismo com a wiki:", (err as Error).message);
+  }
 }
 
 /** Garante o ciclo vigente e o seguinte (que assume automaticamente quando sua data chega). */
@@ -131,6 +144,7 @@ async function main() {
   await seedCatalog();
   await seedPrices(adminId);
   await seedCycle();
+  await seedAbyssFromWiki();
   if (process.env.SEED_DEMO_DATA === "true") {
     await seedDemoData();
     await ensureDemoAccounts();

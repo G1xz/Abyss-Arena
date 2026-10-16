@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { parseSequence, buildSequence, type DraftPreset } from "@/domain/draft";
 import { parseDuration } from "@/domain/results";
 import { addChallenge, createCycle, setChallengeEnabled, updateCycle } from "@/server/abyss/service";
+import { syncAbyss } from "@/server/abyss/sync";
 import { writeAuditLog } from "@/server/audit";
 import { assertAdmin } from "@/server/auth/accounts";
 import { getCurrentUser } from "@/server/auth/next";
@@ -197,6 +198,16 @@ export async function addChallengeAction(cycleId: string, input: { floor: number
   return run(async (u) => {
     await addChallenge(u, cycleId, input);
   });
+}
+
+export async function syncAbyssAction() {
+  return run(async (u) => {
+    try {
+      return await syncAbyss({ actorId: u.id });
+    } catch (err) {
+      throw new AppError("UNAVAILABLE", `Não foi possível consultar a wiki agora: ${(err as Error).message}`);
+    }
+  }, ["/admin/abyss", "/play"]);
 }
 
 // ── Disputas ───────────────────────────────────────────────────────────

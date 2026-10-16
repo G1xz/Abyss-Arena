@@ -79,6 +79,7 @@ location / {
 |---|---|
 | Atualizar a aplicação | `git pull && docker compose --profile proxy up -d --build` |
 | Sincronizar personagens agora | `docker compose exec app npm run catalog:sync` (também no painel admin) |
+| Sincronizar o Abismo agora | `docker compose exec app npm run abyss:sync` (também em Admin → Ciclos do Abismo) |
 | Rodar uma análise de balanceamento | `docker compose exec app npm run balance:run -- --proposals` |
 | Redefinir a senha do admin | `ADMIN_RESET_PASSWORD=true` no `.env`, `docker compose up -d`, depois `docker compose exec app npm run db:seed` |
 | Logs | `docker compose logs -f app` |
@@ -97,4 +98,4 @@ docker compose exec -T db pg_restore -U abyss -d abyss_arena --clean --if-exists
 
 ## 6. Novo ciclo do Abismo
 
-O ciclo muda todo mês. Em **Admin → Ciclos do Abismo**, crie o próximo ciclo antecipadamente: ele assume sozinho quando a data de início chega. Depois da mudança, use **Revisão extraordinária** no painel de preços, se fizer sentido.
+O ciclo muda todo mês e é sincronizado sozinho da wiki do Fandom, entrando em vigor na virada. Confira em **Admin → Ciclos do Abismo** quais metades valem. Se a wiki atrasar ou mudar de formato, cadastre o ciclo à mão (ele é vinculado à wiki quando a página aparecer). Para jogadores de outro servidor, ajuste `ABYSS_SERVER_UTC_OFFSET`. Depois da mudança, use **Revisão extraordinária** no painel de preços, se fizer sentido.

@@ -88,6 +88,7 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
               </div>
             )}
             {inLobby && <Lobby ctx={ctx} decks={decks} />}
+            {inLobby && <RulesCard ctx={ctx} />}
             {state.draft && (state.status === "BANNING" || state.status === "PICKING") && <DraftBoard ctx={ctx} />}
             {afterDraft && (
               <>

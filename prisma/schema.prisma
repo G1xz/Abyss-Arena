@@ -260,6 +260,11 @@ enum AbyssCycleStatus {
   ENDED
 }
 
+enum AbyssCycleSource {
+  MANUAL
+  WIKI
+}
+
 enum ChamberHalf {
   FIRST
   SECOND
@@ -272,6 +277,13 @@ model AbyssCycle {
   endsAt     DateTime
   rules      String
   status     AbyssCycleStatus @default(ACTIVE)
+  /// MANUAL (cadastrado pelo admin) ou WIKI (sincronizado automaticamente).
+  source     AbyssCycleSource @default(MANUAL)
+  /// Data de início no formato da wiki (ex.: "2026-10-16"); identifica o ciclo sincronizado.
+  externalKey String?         @unique
+  /// Chave do ciclo seguinte informada pela wiki.
+  nextKey    String?
+  syncedAt   DateTime?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
   challenges AbyssChallenge[]
@@ -291,6 +303,15 @@ model AbyssChallenge {
   /// Válida para o formato competitivo.
   enabled Boolean     @default(true)
   notes   String?
+  /// Nível dos inimigos da câmara.
+  enemyLevel Int?
+  /// Meta de estrelas (ex.: "Tempo restante > 180/300/420 s").
+  target  String?
+  /// Perturbação da linha ley desta metade (traduzida) e original em inglês.
+  leyLineDisorder   String?
+  leyLineDisorderEn String?
+  /// Inimigos por onda: [{ name, nameEn, count, image }].
+  enemies Json?
 
   @@unique([cycleId, floor, chamber, half])
 }
@@ -718,4 +739,13 @@ model MatchInvite {
 
   @@index([toUserId, status])
   @@index([matchId])
+}
+
+/// Imagens de inimigos baixadas da wiki (a CDN não permite exibição direta em outros sites).
+model AbyssImage {
+  id          String   @id @default(cuid())
+  sourceUrl   String   @unique
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
 }

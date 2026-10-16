@@ -13,7 +13,15 @@ export interface AbyssRulesSnapshot {
   rules: string;
   startsAt: string;
   endsAt: string;
-  challenges: { floor: number; chamber: number; half: ChamberHalf }[];
+  challenges: {
+    floor: number;
+    chamber: number;
+    half: ChamberHalf;
+    enemyLevel?: number | null;
+    target?: string | null;
+    leyLineDisorder?: string | null;
+    enemies?: { name: string; nameEn: string; count: number | null; wave: number; image: string | null }[] | null;
+  }[];
 }
 
 /** Ciclo vigente: ativo e dentro do intervalo de datas. */
@@ -32,12 +40,30 @@ export function toRulesSnapshot(cycle: NonNullable<Awaited<ReturnType<typeof get
     rules: cycle.rules,
     startsAt: cycle.startsAt.toISOString(),
     endsAt: cycle.endsAt.toISOString(),
-    challenges: cycle.challenges.filter((c) => c.enabled).map((c) => ({ floor: c.floor, chamber: c.chamber, half: c.half })),
+    challenges: cycle.challenges
+      .filter((c) => c.enabled)
+      .map((c) => ({
+        floor: c.floor,
+        chamber: c.chamber,
+        half: c.half,
+        enemyLevel: c.enemyLevel,
+        target: c.target,
+        leyLineDisorder: c.leyLineDisorder,
+        enemies: (c.enemies as AbyssRulesSnapshot["challenges"][number]["enemies"]) ?? null,
+      })),
   };
 }
 
-export const DEFAULT_RULES = [
+/** Texto padrão anterior (formato de 4 picks); ciclos que ainda o usam sem alteração são atualizados pelo seed. */
+export const LEGACY_DEFAULT_RULES = [
   "Speedrun das câmaras selecionadas do Abismo Espiral, usando apenas os 4 personagens escolhidos no draft.",
+  "Some o tempo de todas as metades válidas (tempo do cronômetro do jogo). Menor tempo total vence.",
+  "Cada metade deve ser concluída com 3 estrelas; caso contrário, o resultado é inválido.",
+  "Evidências (vídeo ou capturas) são opcionais, mas podem ser exigidas em caso de contestação.",
+].join("\n");
+
+export const DEFAULT_RULES = [
+  "Speedrun das câmaras selecionadas do Abismo Espiral, usando apenas os personagens escolhidos no draft: um time de 4 em cada metade (8 no total).",
   "Some o tempo de todas as metades válidas (tempo do cronômetro do jogo). Menor tempo total vence.",
   "Cada metade deve ser concluída com 3 estrelas; caso contrário, o resultado é inválido.",
   "Evidências (vídeo ou capturas) são opcionais, mas podem ser exigidas em caso de contestação.",
