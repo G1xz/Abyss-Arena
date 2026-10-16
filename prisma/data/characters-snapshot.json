@@ -1,0 +1,1276 @@
+{
+ "source": "yatta",
+ "capturedAt": "2026-10-16T03:47:33.146Z",
+ "characters": [
+  {
+   "slug": "aino",
+   "name": "Aino",
+   "element": "HYDRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Aino.png",
+   "externalId": "10000121",
+   "releasedAt": "2025-09-08T21:00:00.000Z"
+  },
+  {
+   "slug": "albedo",
+   "name": "Albedo",
+   "element": "GEO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Albedo.png",
+   "externalId": "10000038",
+   "releasedAt": "2020-12-21T22:00:00.000Z"
+  },
+  {
+   "slug": "alhaitham",
+   "name": "Alhaitham",
+   "element": "DENDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Alhatham.png",
+   "externalId": "10000078",
+   "releasedAt": "2023-01-16T22:00:00.000Z"
+  },
+  {
+   "slug": "aloy",
+   "name": "Aloy",
+   "element": "CRYO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Aloy.png",
+   "externalId": "10000062",
+   "releasedAt": "2021-08-31T21:00:00.000Z"
+  },
+  {
+   "slug": "alyosha",
+   "name": "Alyosha",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Alyosha.png",
+   "externalId": "10000148",
+   "releasedAt": "2026-08-10T21:00:00.000Z"
+  },
+  {
+   "slug": "amber",
+   "name": "Amber",
+   "element": "PYRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ambor.png",
+   "externalId": "10000021",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "arataki-itto",
+   "name": "Arataki Itto",
+   "element": "GEO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Itto.png",
+   "externalId": "10000057",
+   "releasedAt": "2021-12-14T16:00:00.000Z"
+  },
+  {
+   "slug": "arlecchino",
+   "name": "Arlecchino",
+   "element": "PYRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Arlecchino.png",
+   "externalId": "10000096",
+   "releasedAt": "2024-04-22T21:00:00.000Z"
+  },
+  {
+   "slug": "baizhu",
+   "name": "Baizhu",
+   "element": "DENDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Baizhuer.png",
+   "externalId": "10000082",
+   "releasedAt": "2023-05-02T15:00:00.000Z"
+  },
+  {
+   "slug": "barbara",
+   "name": "Barbara",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Barbara.png",
+   "externalId": "10000014",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "beidou",
+   "name": "Beidou",
+   "element": "ELECTRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Beidou.png",
+   "externalId": "10000024",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "bennett",
+   "name": "Bennett",
+   "element": "PYRO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Bennett.png",
+   "externalId": "10000032",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "candace",
+   "name": "Candace",
+   "element": "HYDRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Candace.png",
+   "externalId": "10000072",
+   "releasedAt": "2022-09-26T21:00:00.000Z"
+  },
+  {
+   "slug": "charlotte",
+   "name": "Charlotte",
+   "element": "CRYO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Charlotte.png",
+   "externalId": "10000088",
+   "releasedAt": "2023-11-06T22:00:00.000Z"
+  },
+  {
+   "slug": "chasca",
+   "name": "Chasca",
+   "element": "ANEMO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Chasca.png",
+   "externalId": "10000104",
+   "releasedAt": "2024-11-18T22:00:00.000Z"
+  },
+  {
+   "slug": "chevreuse",
+   "name": "Chevreuse",
+   "element": "PYRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Chevreuse.png",
+   "externalId": "10000090",
+   "releasedAt": "2024-01-09T16:00:00.000Z"
+  },
+  {
+   "slug": "chiori",
+   "name": "Chiori",
+   "element": "GEO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Chiori.png",
+   "externalId": "10000094",
+   "releasedAt": "2024-03-11T22:00:00.000Z"
+  },
+  {
+   "slug": "chongyun",
+   "name": "Chongyun",
+   "element": "CRYO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Chongyun.png",
+   "externalId": "10000036",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "citlali",
+   "name": "Citlali",
+   "element": "CRYO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Citlali.png",
+   "externalId": "10000107",
+   "releasedAt": "2024-12-30T22:00:00.000Z"
+  },
+  {
+   "slug": "clorinde",
+   "name": "Clorinde",
+   "element": "ELECTRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Clorinde.png",
+   "externalId": "10000098",
+   "releasedAt": "2024-06-03T21:00:00.000Z"
+  },
+  {
+   "slug": "collei",
+   "name": "Collei",
+   "element": "DENDRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Collei.png",
+   "externalId": "10000067",
+   "releasedAt": "2022-08-23T21:00:00.000Z"
+  },
+  {
+   "slug": "columbina",
+   "name": "Columbina",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Columbina.png",
+   "externalId": "10000125",
+   "releasedAt": "2026-01-12T22:00:00.000Z"
+  },
+  {
+   "slug": "cyno",
+   "name": "Cyno",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Cyno.png",
+   "externalId": "10000071",
+   "releasedAt": "2022-09-26T21:00:00.000Z"
+  },
+  {
+   "slug": "dahlia",
+   "name": "Dahlia",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Dahlia.png",
+   "externalId": "10000115",
+   "releasedAt": "2025-06-16T21:00:00.000Z"
+  },
+  {
+   "slug": "dehya",
+   "name": "Dehya",
+   "element": "PYRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Dehya.png",
+   "externalId": "10000079",
+   "releasedAt": "2023-02-27T22:00:00.000Z"
+  },
+  {
+   "slug": "diluc",
+   "name": "Diluc",
+   "element": "PYRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Diluc.png",
+   "externalId": "10000016",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "diona",
+   "name": "Diona",
+   "element": "CRYO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Diona.png",
+   "externalId": "10000039",
+   "releasedAt": "2020-11-11T02:00:00.000Z"
+  },
+  {
+   "slug": "dori",
+   "name": "Dori",
+   "element": "ELECTRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Dori.png",
+   "externalId": "10000068",
+   "releasedAt": "2022-09-09T15:00:00.000Z"
+  },
+  {
+   "slug": "durin",
+   "name": "Durin",
+   "element": "PYRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Durin.png",
+   "externalId": "10000123",
+   "releasedAt": "2025-12-01T22:00:00.000Z"
+  },
+  {
+   "slug": "emilie",
+   "name": "Emilie",
+   "element": "DENDRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Emilie.png",
+   "externalId": "10000099",
+   "releasedAt": "2024-08-06T15:00:00.000Z"
+  },
+  {
+   "slug": "escoffier",
+   "name": "Escoffier",
+   "element": "CRYO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Escoffier.png",
+   "externalId": "10000112",
+   "releasedAt": "2025-05-05T21:00:00.000Z"
+  },
+  {
+   "slug": "eula",
+   "name": "Eula",
+   "element": "CRYO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Eula.png",
+   "externalId": "10000051",
+   "releasedAt": "2021-05-18T15:00:00.000Z"
+  },
+  {
+   "slug": "faruzan",
+   "name": "Faruzan",
+   "element": "ANEMO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Faruzan.png",
+   "externalId": "10000076",
+   "releasedAt": "2022-12-05T22:00:00.000Z"
+  },
+  {
+   "slug": "fischl",
+   "name": "Fischl",
+   "element": "ELECTRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Fischl.png",
+   "externalId": "10000031",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "flins",
+   "name": "Flins",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Flins.png",
+   "externalId": "10000120",
+   "releasedAt": "2025-09-30T15:00:00.000Z"
+  },
+  {
+   "slug": "freminet",
+   "name": "Freminet",
+   "element": "CRYO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Freminet.png",
+   "externalId": "10000085",
+   "releasedAt": "2023-09-05T15:00:00.000Z"
+  },
+  {
+   "slug": "furina",
+   "name": "Furina",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Furina.png",
+   "externalId": "10000089",
+   "releasedAt": "2023-11-06T22:00:00.000Z"
+  },
+  {
+   "slug": "gaming",
+   "name": "Gaming",
+   "element": "PYRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Gaming.png",
+   "externalId": "10000092",
+   "releasedAt": "2024-01-29T22:00:00.000Z"
+  },
+  {
+   "slug": "ganyu",
+   "name": "Ganyu",
+   "element": "CRYO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ganyu.png",
+   "externalId": "10000037",
+   "releasedAt": "2021-01-12T16:00:00.000Z"
+  },
+  {
+   "slug": "gorou",
+   "name": "Gorou",
+   "element": "GEO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Gorou.png",
+   "externalId": "10000055",
+   "releasedAt": "2021-12-14T16:00:00.000Z"
+  },
+  {
+   "slug": "hu-tao",
+   "name": "Hutao",
+   "element": "PYRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Hutao.png",
+   "externalId": "10000046",
+   "releasedAt": "2021-03-02T16:00:00.000Z"
+  },
+  {
+   "slug": "iansan",
+   "name": "Iansan",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Iansan.png",
+   "externalId": "10000110",
+   "releasedAt": "2025-03-24T22:00:00.000Z"
+  },
+  {
+   "slug": "ifa",
+   "name": "Ifa",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ifa.png",
+   "externalId": "10000113",
+   "releasedAt": "2025-05-05T21:00:00.000Z"
+  },
+  {
+   "slug": "illuga",
+   "name": "Illuga",
+   "element": "GEO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Illuga.png",
+   "externalId": "10000127",
+   "releasedAt": "2026-02-03T16:00:00.000Z"
+  },
+  {
+   "slug": "ineffa",
+   "name": "Ineffa",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ineffa.png",
+   "externalId": "10000116",
+   "releasedAt": "2025-07-28T21:00:00.000Z"
+  },
+  {
+   "slug": "jahoda",
+   "name": "Jahoda",
+   "element": "ANEMO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Jahoda.png",
+   "externalId": "10000124",
+   "releasedAt": "2025-12-01T22:00:00.000Z"
+  },
+  {
+   "slug": "jean",
+   "name": "Jean",
+   "element": "ANEMO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Qin.png",
+   "externalId": "10000003",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "kachina",
+   "name": "Kachina",
+   "element": "GEO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kachina.png",
+   "externalId": "10000100",
+   "releasedAt": "2024-08-26T21:00:00.000Z"
+  },
+  {
+   "slug": "kaedehara-kazuha",
+   "name": "Kaedehara Kazuha",
+   "element": "ANEMO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kazuha.png",
+   "externalId": "10000047",
+   "releasedAt": "2021-06-29T15:00:00.000Z"
+  },
+  {
+   "slug": "kaeya",
+   "name": "Kaeya",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kaeya.png",
+   "externalId": "10000015",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "kamisato-ayaka",
+   "name": "Kamisato Ayaka",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ayaka.png",
+   "externalId": "10000002",
+   "releasedAt": "2021-07-20T21:00:00.000Z"
+  },
+  {
+   "slug": "kamisato-ayato",
+   "name": "Kamisato Ayato",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ayato.png",
+   "externalId": "10000066",
+   "releasedAt": "2022-03-29T21:00:00.000Z"
+  },
+  {
+   "slug": "kaveh",
+   "name": "Kaveh",
+   "element": "DENDRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kaveh.png",
+   "externalId": "10000081",
+   "releasedAt": "2023-05-02T15:00:00.000Z"
+  },
+  {
+   "slug": "keqing",
+   "name": "Keqing",
+   "element": "ELECTRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Keqing.png",
+   "externalId": "10000042",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "kinich",
+   "name": "Kinich",
+   "element": "DENDRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kinich.png",
+   "externalId": "10000101",
+   "releasedAt": "2024-09-17T15:00:00.000Z"
+  },
+  {
+   "slug": "kirara",
+   "name": "Kirara",
+   "element": "DENDRO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Momoka.png",
+   "externalId": "10000061",
+   "releasedAt": "2023-05-22T21:00:00.000Z"
+  },
+  {
+   "slug": "klee",
+   "name": "Klee",
+   "element": "PYRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Klee.png",
+   "externalId": "10000029",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "kujou-sara",
+   "name": "Kujou Sara",
+   "element": "ELECTRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Sara.png",
+   "externalId": "10000056",
+   "releasedAt": "2021-08-31T21:00:00.000Z"
+  },
+  {
+   "slug": "kuki-shinobu",
+   "name": "Kuki Shinobu",
+   "element": "ELECTRO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Shinobu.png",
+   "externalId": "10000065",
+   "releasedAt": "2022-06-21T15:00:00.000Z"
+  },
+  {
+   "slug": "lan-yan",
+   "name": "Lan Yan",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Lanyan.png",
+   "externalId": "10000108",
+   "releasedAt": "2025-01-21T16:00:00.000Z"
+  },
+  {
+   "slug": "lauma",
+   "name": "Lauma",
+   "element": "DENDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Lauma.png",
+   "externalId": "10000119",
+   "releasedAt": "2025-09-08T21:00:00.000Z"
+  },
+  {
+   "slug": "layla",
+   "name": "Layla",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Layla.png",
+   "externalId": "10000074",
+   "releasedAt": "2022-11-18T16:00:00.000Z"
+  },
+  {
+   "slug": "linnea",
+   "name": "Linnea",
+   "element": "GEO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Linnea.png",
+   "externalId": "10000130",
+   "releasedAt": "2026-04-06T21:00:00.000Z"
+  },
+  {
+   "slug": "lisa",
+   "name": "Lisa",
+   "element": "ELECTRO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Lisa.png",
+   "externalId": "10000006",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "lohen",
+   "name": "Lohen",
+   "element": "CRYO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Lohen.png",
+   "externalId": "10000129",
+   "releasedAt": "2026-06-09T15:00:00.000Z"
+  },
+  {
+   "slug": "lynette",
+   "name": "Lynette",
+   "element": "ANEMO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Linette.png",
+   "externalId": "10000083",
+   "releasedAt": "2023-08-14T21:00:00.000Z"
+  },
+  {
+   "slug": "lyney",
+   "name": "Lyney",
+   "element": "PYRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Liney.png",
+   "externalId": "10000084",
+   "releasedAt": "2023-08-14T21:00:00.000Z"
+  },
+  {
+   "slug": "mavuika",
+   "name": "Mavuika",
+   "element": "PYRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Mavuika.png",
+   "externalId": "10000106",
+   "releasedAt": "2024-12-30T22:00:00.000Z"
+  },
+  {
+   "slug": "mika",
+   "name": "Mika",
+   "element": "CRYO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Mika.png",
+   "externalId": "10000080",
+   "releasedAt": "2023-03-21T16:00:00.000Z"
+  },
+  {
+   "slug": "mona",
+   "name": "Mona",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Mona.png",
+   "externalId": "10000041",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "mualani",
+   "name": "Mualani",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Mualani.png",
+   "externalId": "10000102",
+   "releasedAt": "2024-08-26T21:00:00.000Z"
+  },
+  {
+   "slug": "nahida",
+   "name": "Nahida",
+   "element": "DENDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Nahida.png",
+   "externalId": "10000073",
+   "releasedAt": "2022-10-31T22:00:00.000Z"
+  },
+  {
+   "slug": "navia",
+   "name": "Navia",
+   "element": "GEO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Navia.png",
+   "externalId": "10000091",
+   "releasedAt": "2023-12-18T22:00:00.000Z"
+  },
+  {
+   "slug": "nefer",
+   "name": "Nefer",
+   "element": "DENDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Nefer.png",
+   "externalId": "10000122",
+   "releasedAt": "2025-10-20T21:00:00.000Z"
+  },
+  {
+   "slug": "neuvillette",
+   "name": "Neuvillette",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Neuvillette.png",
+   "externalId": "10000087",
+   "releasedAt": "2023-09-25T21:00:00.000Z"
+  },
+  {
+   "slug": "nicole",
+   "name": "Nicole",
+   "element": "PYRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Nicole.png",
+   "externalId": "10000131",
+   "releasedAt": "2026-05-18T21:00:00.000Z"
+  },
+  {
+   "slug": "nilou",
+   "name": "Nilou",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Nilou.png",
+   "externalId": "10000070",
+   "releasedAt": "2022-10-14T15:00:00.000Z"
+  },
+  {
+   "slug": "ningguang",
+   "name": "Ningguang",
+   "element": "GEO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Ningguang.png",
+   "externalId": "10000027",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "noelle",
+   "name": "Noelle",
+   "element": "GEO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Noel.png",
+   "externalId": "10000034",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "odette",
+   "name": "Odette",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Odette.png",
+   "externalId": "10000150",
+   "releasedAt": "2026-08-10T21:00:00.000Z"
+  },
+  {
+   "slug": "ororon",
+   "name": "Ororon",
+   "element": "ELECTRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Olorun.png",
+   "externalId": "10000105",
+   "releasedAt": "2024-11-18T22:00:00.000Z"
+  },
+  {
+   "slug": "prune",
+   "name": "Prune",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Prune.png",
+   "externalId": "10000132",
+   "releasedAt": "2026-05-18T21:00:00.000Z"
+  },
+  {
+   "slug": "qiqi",
+   "name": "Qiqi",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Qiqi.png",
+   "externalId": "10000035",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "raiden-shogun",
+   "name": "Shogun Raiden",
+   "element": "ELECTRO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Shougun.png",
+   "externalId": "10000052",
+   "releasedAt": "2021-08-31T21:00:00.000Z"
+  },
+  {
+   "slug": "razor",
+   "name": "Razor",
+   "element": "ELECTRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Razor.png",
+   "externalId": "10000020",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "rosaria",
+   "name": "Rosaria",
+   "element": "CRYO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Rosaria.png",
+   "externalId": "10000045",
+   "releasedAt": "2021-04-06T15:00:00.000Z"
+  },
+  {
+   "slug": "sandrone",
+   "name": "Sandrone",
+   "element": "CRYO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_MarionetteNew.png",
+   "externalId": "10000133",
+   "releasedAt": "2026-06-29T21:00:00.000Z"
+  },
+  {
+   "slug": "sangonomiya-kokomi",
+   "name": "Sangonomiya Kokomi",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Kokomi.png",
+   "externalId": "10000054",
+   "releasedAt": "2021-09-21T15:00:00.000Z"
+  },
+  {
+   "slug": "sayu",
+   "name": "Sayu",
+   "element": "ANEMO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Sayu.png",
+   "externalId": "10000053",
+   "releasedAt": "2021-08-10T15:00:00.000Z"
+  },
+  {
+   "slug": "sethos",
+   "name": "Sethos",
+   "element": "ELECTRO",
+   "weaponType": "BOW",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Sethos.png",
+   "externalId": "10000097",
+   "releasedAt": "2024-06-03T21:00:00.000Z"
+  },
+  {
+   "slug": "shenhe",
+   "name": "Shenhe",
+   "element": "CRYO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Shenhe.png",
+   "externalId": "10000063",
+   "releasedAt": "2022-01-04T22:00:00.000Z"
+  },
+  {
+   "slug": "shikanoin-heizou",
+   "name": "Shikanoin Heizou",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Heizo.png",
+   "externalId": "10000059",
+   "releasedAt": "2022-07-12T21:00:00.000Z"
+  },
+  {
+   "slug": "sigewinne",
+   "name": "Sigewinne",
+   "element": "HYDRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Sigewinne.png",
+   "externalId": "10000095",
+   "releasedAt": "2024-06-26T15:00:00.000Z"
+  },
+  {
+   "slug": "skirk",
+   "name": "Skirk",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_SkirkNew.png",
+   "externalId": "10000114",
+   "releasedAt": "2025-06-16T21:00:00.000Z"
+  },
+  {
+   "slug": "sucrose",
+   "name": "Sucrose",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Sucrose.png",
+   "externalId": "10000043",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "tartaglia",
+   "name": "Tartaglia",
+   "element": "HYDRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Tartaglia.png",
+   "externalId": "10000033",
+   "releasedAt": "2020-11-11T02:00:00.000Z"
+  },
+  {
+   "slug": "thoma",
+   "name": "Thoma",
+   "element": "PYRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Tohma.png",
+   "externalId": "10000050",
+   "releasedAt": "2021-11-02T16:00:00.000Z"
+  },
+  {
+   "slug": "tighnari",
+   "name": "Tighnari",
+   "element": "DENDRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Tighnari.png",
+   "externalId": "10000069",
+   "releasedAt": "2022-08-23T21:00:00.000Z"
+  },
+  {
+   "slug": "traveler-anemo",
+   "name": "Viajante (Anemo)",
+   "element": "ANEMO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-anemo",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "traveler-cryo",
+   "name": "Viajante (Cryo)",
+   "element": "CRYO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-cryo",
+   "releasedAt": "2026-08-12T19:00:00.000Z"
+  },
+  {
+   "slug": "traveler-dendro",
+   "name": "Viajante (Dendro)",
+   "element": "DENDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-dendro",
+   "releasedAt": "2022-07-12T21:00:00.000Z"
+  },
+  {
+   "slug": "traveler-electro",
+   "name": "Viajante (Electro)",
+   "element": "ELECTRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-electro",
+   "releasedAt": "2021-07-20T21:00:00.000Z"
+  },
+  {
+   "slug": "traveler-geo",
+   "name": "Viajante (Geo)",
+   "element": "GEO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-geo",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "traveler-hydro",
+   "name": "Viajante (Hydro)",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-hydro",
+   "releasedAt": "2023-07-23T21:00:00.000Z"
+  },
+  {
+   "slug": "traveler-pyro",
+   "name": "Viajante (Pyro)",
+   "element": "PYRO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_PlayerBoy.png",
+   "externalId": "traveler-pyro",
+   "releasedAt": "2025-01-01T19:00:00.000Z"
+  },
+  {
+   "slug": "varesa",
+   "name": "Varesa",
+   "element": "ELECTRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Varesa.png",
+   "externalId": "10000111",
+   "releasedAt": "2025-03-24T22:00:00.000Z"
+  },
+  {
+   "slug": "varka",
+   "name": "Varka",
+   "element": "ANEMO",
+   "weaponType": "CLAYMORE",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Varka.png",
+   "externalId": "10000128",
+   "releasedAt": "2026-02-23T22:00:00.000Z"
+  },
+  {
+   "slug": "venti",
+   "name": "Venti",
+   "element": "ANEMO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Venti.png",
+   "externalId": "10000022",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "vesna",
+   "name": "Vesna",
+   "element": "ANEMO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Vesna.png",
+   "externalId": "10000143",
+   "releasedAt": "2026-09-21T21:00:00.000Z"
+  },
+  {
+   "slug": "vodyanitsa",
+   "name": "Vodyanitsa",
+   "element": "HYDRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Vodyanitsa.png",
+   "externalId": "10000140",
+   "releasedAt": "2026-09-21T21:00:00.000Z"
+  },
+  {
+   "slug": "wanderer",
+   "name": "Andarilho",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Wanderer.png",
+   "externalId": "10000075",
+   "releasedAt": "2022-12-05T22:00:00.000Z"
+  },
+  {
+   "slug": "wriothesley",
+   "name": "Wriothesley",
+   "element": "CRYO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Wriothesley.png",
+   "externalId": "10000086",
+   "releasedAt": "2023-10-17T15:00:00.000Z"
+  },
+  {
+   "slug": "xiangling",
+   "name": "Xiangling",
+   "element": "PYRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Xiangling.png",
+   "externalId": "10000023",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "xianyun",
+   "name": "Xianyun",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Liuyun.png",
+   "externalId": "10000093",
+   "releasedAt": "2024-01-29T22:00:00.000Z"
+  },
+  {
+   "slug": "xiao",
+   "name": "Xiao",
+   "element": "ANEMO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Xiao.png",
+   "externalId": "10000026",
+   "releasedAt": "2021-02-01T22:00:00.000Z"
+  },
+  {
+   "slug": "xilonen",
+   "name": "Xilonen",
+   "element": "GEO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Xilonen.png",
+   "externalId": "10000103",
+   "releasedAt": "2024-10-07T21:00:00.000Z"
+  },
+  {
+   "slug": "xingqiu",
+   "name": "Xingqiu",
+   "element": "HYDRO",
+   "weaponType": "SWORD",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Xingqiu.png",
+   "externalId": "10000025",
+   "releasedAt": "2020-09-27T22:00:00.000Z"
+  },
+  {
+   "slug": "xinyan",
+   "name": "Xinyan",
+   "element": "PYRO",
+   "weaponType": "CLAYMORE",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Xinyan.png",
+   "externalId": "10000044",
+   "releasedAt": "2020-12-02T02:00:00.000Z"
+  },
+  {
+   "slug": "yae-miko",
+   "name": "Yae Miko",
+   "element": "ELECTRO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Yae.png",
+   "externalId": "10000058",
+   "releasedAt": "2022-02-15T22:00:00.000Z"
+  },
+  {
+   "slug": "yanfei",
+   "name": "Yanfei",
+   "element": "PYRO",
+   "weaponType": "CATALYST",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Feiyan.png",
+   "externalId": "10000048",
+   "releasedAt": "2021-04-26T21:00:00.000Z"
+  },
+  {
+   "slug": "yaoyao",
+   "name": "Yaoyao",
+   "element": "DENDRO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Yaoyao.png",
+   "externalId": "10000077",
+   "releasedAt": "2023-01-16T22:00:00.000Z"
+  },
+  {
+   "slug": "yelan",
+   "name": "Yelan",
+   "element": "HYDRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Yelan.png",
+   "externalId": "10000060",
+   "releasedAt": "2022-05-30T21:00:00.000Z"
+  },
+  {
+   "slug": "yoimiya",
+   "name": "Yoimiya",
+   "element": "PYRO",
+   "weaponType": "BOW",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Yoimiya.png",
+   "externalId": "10000049",
+   "releasedAt": "2021-08-10T15:00:00.000Z"
+  },
+  {
+   "slug": "yumemizuki-mizuki",
+   "name": "Yumemizuki Mizuki",
+   "element": "ANEMO",
+   "weaponType": "CATALYST",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Mizuki.png",
+   "externalId": "10000109",
+   "releasedAt": "2025-02-10T22:00:00.000Z"
+  },
+  {
+   "slug": "yun-jin",
+   "name": "Yunjin",
+   "element": "GEO",
+   "weaponType": "POLEARM",
+   "rarity": 4,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Yunjin.png",
+   "externalId": "10000064",
+   "releasedAt": "2022-01-04T22:00:00.000Z"
+  },
+  {
+   "slug": "zhongli",
+   "name": "Zhongli",
+   "element": "GEO",
+   "weaponType": "POLEARM",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Zhongli.png",
+   "externalId": "10000030",
+   "releasedAt": "2020-12-02T02:00:00.000Z"
+  },
+  {
+   "slug": "zibai",
+   "name": "Zibai",
+   "element": "GEO",
+   "weaponType": "SWORD",
+   "rarity": 5,
+   "iconUrl": "https://gi.yatta.moe/assets/UI/UI_AvatarIcon_Zibai.png",
+   "externalId": "10000126",
+   "releasedAt": "2026-02-03T16:00:00.000Z"
+  }
+ ]
+}

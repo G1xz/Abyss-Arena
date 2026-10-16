@@ -1,0 +1,662 @@
+// Abyss Arena — modelo de dados.
+// Pontos competitivos são sempre inteiros. Snapshots de partida são imutáveis.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Usuários ─────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  nickname      String
+  /// nickname em minúsculas, garante unicidade sem diferenciar maiúsculas
+  nicknameKey   String   @unique
+  passwordHash  String
+  role          Role     @default(USER)
+  /// Informado pelo jogador, não verificado.
+  genshinUid    String?
+  bio           String?
+  /// Reservado para ELO/MMR futuro. Não usado no ranking do MVP.
+  rating        Int      @default(1000)
+  defaultDeckId String?  @unique
+  defaultDeck   Deck?    @relation("UserDefaultDeck", fields: [defaultDeckId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  resetTokens     PasswordResetToken[]
+  decks           Deck[]               @relation("UserDecks")
+  hostedMatches   Match[]              @relation("MatchHost")
+  matchPlayers    MatchPlayer[]
+  snapshots       MatchDeckSnapshot[]
+  draftActions    DraftAction[]
+  results         MatchResult[]        @relation("ResultOwner")
+  confirmations   MatchResult[]        @relation("ResultConfirmer")
+  disputesRaised  MatchDispute[]       @relation("DisputeRaiser")
+  disputesSolved  MatchDispute[]       @relation("DisputeResolver")
+  matchEvents     MatchEvent[]
+  auditLogs       AdminAuditLog[]
+  priceChanges    PriceChange[]
+  proposalReviews BalanceProposal[]
+  versionsCreated PriceVersion[]       @relation("VersionCreator")
+  versionsPublished PriceVersion[]     @relation("VersionPublisher")
+  balanceRuns     BalanceRun[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  /// SHA-256 do token; o token em si só existe no cookie do usuário
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  userAgent  String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ───────────────────────────── Catálogo ─────────────────────────────
+
+enum Element {
+  PYRO
+  HYDRO
+  ANEMO
+  ELECTRO
+  DENDRO
+  CRYO
+  GEO
+}
+
+enum WeaponType {
+  SWORD
+  CLAYMORE
+  POLEARM
+  BOW
+  CATALYST
+}
+
+model Character {
+  id                 String     @id @default(cuid())
+  /// Identificador estável e canônico (derivado do nome em inglês). Ex.: "kamisato-ayaka", "traveler-anemo".
+  slug               String     @unique
+  name               String
+  element            Element
+  weaponType         WeaponType
+  rarity             Int
+  iconUrl            String?
+  externalSource     String
+  externalId         String
+  releasedAt         DateTime?
+  /// Liberação administrativa para partidas competitivas. Novos personagens entram desabilitados.
+  competitiveEnabled Boolean    @default(false)
+  /// Marcado quando o personagem some da fonte externa. Nunca apagamos personagens.
+  missingFromSource  Boolean    @default(false)
+  /// Bloqueia sugestões automáticas de preço para este personagem.
+  balanceLocked      Boolean    @default(false)
+  balanceLockReason  String?
+  lastSyncedAt       DateTime   @default(now())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  prices          CharacterPrice[]
+  priceChanges    PriceChange[]
+  deckEntries     DeckCharacter[]
+  snapshotEntries MatchDeckSnapshotEntry[]
+  draftActions    DraftAction[]
+  metrics         BalanceMetric[]
+  proposals       BalanceProposal[]
+
+  @@unique([externalSource, externalId])
+  @@index([competitiveEnabled])
+}
+
+// ───────────────────────────── Preços ─────────────────────────────
+
+enum PriceVersionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  ARCHIVED
+}
+
+model PriceVersion {
+  id            String             @id @default(cuid())
+  /// Número sequencial atribuído na publicação (v1, v2, ...).
+  number        Int?               @unique
+  label         String?
+  status        PriceVersionStatus @default(DRAFT)
+  notes         String?
+  basedOnId     String?
+  basedOn       PriceVersion?      @relation("VersionLineage", fields: [basedOnId], references: [id], onDelete: SetNull)
+  derived       PriceVersion[]     @relation("VersionLineage")
+  createdById   String?
+  createdBy     User?              @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  publishedById String?
+  publishedBy   User?              @relation("VersionPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  scheduledFor  DateTime?
+  /// Data de vigência.
+  publishedAt   DateTime?
+  createdAt     DateTime           @default(now())
+
+  prices      CharacterPrice[]
+  changes     PriceChange[]
+  matches     Match[]
+  snapshots   MatchDeckSnapshot[]
+  proposals   BalanceProposal[]
+  balanceRuns BalanceRun[]
+
+  @@index([status])
+}
+
+model CharacterPrice {
+  id             String       @id @default(cuid())
+  priceVersionId String
+  priceVersion   PriceVersion @relation(fields: [priceVersionId], references: [id], onDelete: Cascade)
+  characterId    String
+  character      Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  cost           Int
+  /// Preço inicial ainda não validado por dados competitivos.
+  isProvisional  Boolean      @default(true)
+
+  @@unique([priceVersionId, characterId])
+  @@index([characterId])
+}
+
+enum PriceChangeSource {
+  INITIAL
+  MANUAL
+  SUGGESTED
+}
+
+model PriceChange {
+  id             String            @id @default(cuid())
+  priceVersionId String
+  priceVersion   PriceVersion      @relation(fields: [priceVersionId], references: [id], onDelete: Cascade)
+  characterId    String
+  character      Character         @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  previousCost   Int?
+  newCost        Int
+  source         PriceChangeSource
+  justification  String
+  adminId        String?
+  admin          User?             @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  proposalId     String?           @unique
+  proposal       BalanceProposal?  @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  approvedAt     DateTime          @default(now())
+  /// Preenchido quando a versão é publicada.
+  effectiveAt    DateTime?
+
+  @@unique([priceVersionId, characterId])
+  @@index([characterId])
+}
+
+// ───────────────────────────── Decks ─────────────────────────────
+
+model Deck {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation("UserDecks", fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  characters DeckCharacter[]
+  defaultFor User?           @relation("UserDefaultDeck")
+  matchSeats MatchPlayer[]
+
+  @@index([userId])
+}
+
+model DeckCharacter {
+  deckId      String
+  deck        Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  addedAt     DateTime  @default(now())
+
+  @@id([deckId, characterId])
+  @@index([characterId])
+}
+
+// ───────────────────────────── Abismo ─────────────────────────────
+
+enum AbyssCycleStatus {
+  ACTIVE
+  ENDED
+}
+
+enum ChamberHalf {
+  FIRST
+  SECOND
+}
+
+model AbyssCycle {
+  id         String           @id @default(cuid())
+  name       String
+  startsAt   DateTime
+  endsAt     DateTime
+  rules      String
+  status     AbyssCycleStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  challenges AbyssChallenge[]
+  matches    Match[]
+  runs       BalanceRun[]
+
+  @@index([status, startsAt])
+}
+
+model AbyssChallenge {
+  id      String      @id @default(cuid())
+  cycleId String
+  cycle   AbyssCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  floor   Int
+  chamber Int
+  half    ChamberHalf
+  /// Válida para o formato competitivo.
+  enabled Boolean     @default(true)
+  notes   String?
+
+  @@unique([cycleId, floor, chamber, half])
+}
+
+// ───────────────────────────── Partidas ─────────────────────────────
+
+enum MatchStatus {
+  WAITING
+  READY
+  BANNING
+  PICKING
+  LOCKED
+  AWAITING_RESULTS
+  DISPUTED
+  COMPLETED
+  CANCELLED
+}
+
+enum Seat {
+  A
+  B
+}
+
+enum MatchOutcome {
+  WIN
+  LOSS
+  DRAW
+}
+
+model Match {
+  id             String       @id @default(cuid())
+  /// Código de convite curto.
+  code           String       @unique
+  status         MatchStatus  @default(WAITING)
+  hostId         String
+  host           User         @relation("MatchHost", fields: [hostId], references: [id], onDelete: Restrict)
+  /// Tabela de preços usada. Fixada definitivamente no início do draft.
+  priceVersionId String
+  priceVersion   PriceVersion @relation(fields: [priceVersionId], references: [id], onDelete: Restrict)
+  abyssCycleId   String?
+  abyssCycle     AbyssCycle?  @relation(fields: [abyssCycleId], references: [id], onDelete: SetNull)
+  /// Configuração congelada: orçamento, sequência do draft, política de empate.
+  config         Json
+  /// Regras do Abismo congeladas (ciclo + desafios válidos).
+  rules          Json?
+  currentStep    Int          @default(0)
+  /// Incrementa a cada mudança de estado.
+  revision       Int          @default(0)
+  winnerSeat     Seat?
+  isDraw         Boolean      @default(false)
+  /// CONFIRMED (bilateral) ou ADMIN (resolução de disputa).
+  resolvedBy     String?
+  cancelReason   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  draftStartedAt DateTime?
+  lockedAt       DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+
+  players   MatchPlayer[]
+  snapshots MatchDeckSnapshot[]
+  actions   DraftAction[]
+  events    MatchEvent[]
+  results   MatchResult[]
+  disputes  MatchDispute[]
+
+  @@index([status])
+  @@index([completedAt])
+  @@index([hostId])
+}
+
+model MatchPlayer {
+  id         String        @id @default(cuid())
+  matchId    String
+  match      Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  seat       Seat
+  deckId     String?
+  deck       Deck?         @relation(fields: [deckId], references: [id], onDelete: SetNull)
+  isReady    Boolean       @default(false)
+  outcome    MatchOutcome?
+  joinedAt   DateTime      @default(now())
+  lastSeenAt DateTime?
+
+  @@unique([matchId, seat])
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+model MatchDeckSnapshot {
+  id             String                   @id @default(cuid())
+  matchId        String
+  match          Match                    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  seat           Seat
+  userId         String
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  /// Apenas informativo; o snapshot não depende do deck original.
+  sourceDeckId   String?
+  deckName       String
+  priceVersionId String
+  priceVersion   PriceVersion             @relation(fields: [priceVersionId], references: [id], onDelete: Restrict)
+  budget         Int
+  totalCost      Int
+  createdAt      DateTime                 @default(now())
+  entries        MatchDeckSnapshotEntry[]
+
+  @@unique([matchId, seat])
+}
+
+model MatchDeckSnapshotEntry {
+  id          String            @id @default(cuid())
+  snapshotId  String
+  snapshot    MatchDeckSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  characterId String
+  character   Character         @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  cost        Int
+  name        String
+  element     Element
+  weaponType  WeaponType
+  rarity      Int
+  iconUrl     String?
+
+  @@unique([snapshotId, characterId])
+  @@index([characterId])
+}
+
+enum DraftActionType {
+  BAN
+  PICK
+}
+
+model DraftAction {
+  id          String          @id @default(cuid())
+  matchId     String
+  match       Match           @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  stepIndex   Int
+  type        DraftActionType
+  actorSeat   Seat
+  /// Deck afetado: BAN atinge o deck do oponente; PICK sai do próprio deck.
+  targetSeat  Seat
+  characterId String
+  character   Character       @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  actorUserId String
+  actorUser   User            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  createdAt   DateTime        @default(now())
+
+  @@unique([matchId, stepIndex])
+  @@unique([matchId, type, targetSeat, characterId])
+  @@index([characterId])
+}
+
+model MatchEvent {
+  id          String   @id @default(cuid())
+  matchId     String
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  type        String
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([matchId, createdAt])
+}
+
+// ───────────────────────────── Resultados ─────────────────────────────
+
+enum ResultStatus {
+  SUBMITTED
+  CONFIRMED
+  DISPUTED
+}
+
+model MatchResult {
+  id                String           @id @default(cuid())
+  matchId           String
+  match             Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  seat              Seat
+  userId            String
+  user              User             @relation("ResultOwner", fields: [userId], references: [id], onDelete: Restrict)
+  /// Tempo total declarado, em milissegundos.
+  timeMs            Int
+  status            ResultStatus     @default(SUBMITTED)
+  submittedAt       DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  confirmedAt       DateTime?
+  confirmedByUserId String?
+  confirmedBy       User?            @relation("ResultConfirmer", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  /// Tempo definido pelo administrador em uma resolução de disputa.
+  finalTimeMs       Int?
+  evidence          ResultEvidence[]
+
+  @@unique([matchId, seat])
+}
+
+model ResultEvidence {
+  id        String      @id @default(cuid())
+  resultId  String
+  result    MatchResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  /// Link informado pelo jogador. Não é verificado automaticamente.
+  url       String
+  createdAt DateTime    @default(now())
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+enum DisputeResolution {
+  ACCEPT_TIMES
+  FORCE_WINNER
+  DRAW
+  VOID
+}
+
+model MatchDispute {
+  id               String             @id @default(cuid())
+  matchId          String
+  match            Match              @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  raisedByUserId   String
+  raisedBy         User               @relation("DisputeRaiser", fields: [raisedByUserId], references: [id], onDelete: Restrict)
+  /// Resultado contestado.
+  againstSeat      Seat
+  reason           String
+  status           DisputeStatus      @default(OPEN)
+  resolution       DisputeResolution?
+  resolutionNote   String?
+  resolvedByUserId String?
+  resolvedBy       User?              @relation("DisputeResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  resolvedAt       DateTime?
+  createdAt        DateTime           @default(now())
+
+  @@index([status])
+  @@index([matchId])
+}
+
+// ───────────────────────────── Balanceamento ─────────────────────────────
+
+enum BalanceRunKind {
+  DAILY
+  WEEKLY
+  MANUAL
+  EXTRAORDINARY
+}
+
+enum MetricScope {
+  CURRENT_CYCLE
+  HISTORICAL
+  OVERALL
+}
+
+model BalanceRun {
+  id                String          @id @default(cuid())
+  kind              BalanceRunKind
+  generateProposals Boolean         @default(false)
+  triggeredById     String?
+  triggeredBy       User?           @relation(fields: [triggeredById], references: [id], onDelete: SetNull)
+  abyssCycleId      String?
+  abyssCycle        AbyssCycle?     @relation(fields: [abyssCycleId], references: [id], onDelete: SetNull)
+  priceVersionId    String
+  priceVersion      PriceVersion    @relation(fields: [priceVersionId], references: [id], onDelete: Restrict)
+  windowStart       DateTime
+  windowEnd         DateTime
+  params            Json
+  summary           Json?
+  createdAt         DateTime        @default(now())
+  metrics           BalanceMetric[]
+  proposals         BalanceProposal[]
+
+  @@index([createdAt])
+}
+
+model BalanceMetric {
+  id                String      @id @default(cuid())
+  runId             String
+  run               BalanceRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  characterId       String
+  character         Character   @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  scope             MetricScope
+  matches           Int
+  /// Decks (em partidas válidas) que continham o personagem = oportunidades de ban.
+  deckAppearances   Int
+  bans              Int
+  /// Decks em que o personagem estava disponível (não banido) = oportunidades de pick.
+  pickOpportunities Int
+  picks             Int
+  /// Aparições efetivas em times com resultado validado.
+  games             Int
+  wins              Int
+  losses            Int
+  draws             Int
+  pickRate          Float
+  banRate           Float
+  winRate           Float?
+  smoothedWinRate   Float
+  createdAt         DateTime    @default(now())
+
+  @@unique([runId, characterId, scope])
+  @@index([characterId, createdAt])
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+model BalanceProposal {
+  id                 String         @id @default(cuid())
+  runId              String
+  run                BalanceRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  characterId        String
+  character          Character      @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  basePriceVersionId String
+  basePriceVersion   PriceVersion   @relation(fields: [basePriceVersionId], references: [id], onDelete: Restrict)
+  currentCost        Int
+  suggestedCost      Int
+  approvedCost       Int?
+  score              Float
+  confidence         Float
+  /// Sinais detectados, com números e explicação.
+  signals            Json
+  explanation        String
+  status             ProposalStatus @default(PENDING)
+  reviewedById       String?
+  reviewedBy         User?          @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime       @default(now())
+  priceChange        PriceChange?
+
+  @@index([status])
+  @@index([characterId])
+}
+
+// ───────────────────────────── Sistema ─────────────────────────────
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  /// Nulo para ações automáticas do sistema.
+  adminId    String?
+  admin      User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  reason     String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  /// Chave do período (ex.: "2026-10-16"), garante execução única por período.
+  periodKey  String
+  status     String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  error      String?
+  details    Json?
+
+  @@unique([job, periodKey])
+  @@index([job, startedAt])
+}
