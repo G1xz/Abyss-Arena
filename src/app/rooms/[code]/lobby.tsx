@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Copy, Crown, Loader2, LogOut, Play, X } from "lucide-react";
+import { Check, Crown, Loader2, LogOut, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge, NativeSelect } from "@/components/ui/misc";
 import type { Seat } from "@/domain/draft";
 import { cn } from "@/lib/utils";
+import { InvitePanel } from "./invite-panel";
 import type { RoomContext } from "./shared";
 
 export interface LobbyDeck {
@@ -32,31 +33,13 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
     else if (success) toast.success(success);
   };
 
-  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/rooms/${state.code}` : `/rooms/${state.code}`;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-      toast.success("Link de convite copiado");
-    } catch {
-      toast.message(inviteUrl);
-    }
-  };
 
   const seatCard = (seat: Seat) => {
     const player = state.players[seat];
     const mine = seat === mySeat;
     if (!player) {
       return (
-        <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-card/40 p-5 text-center" data-testid="invite-box">
-          <p className="font-display font-semibold">Aguardando oponente</p>
-          <p className="text-sm text-muted-foreground">Envie o código ou o link de convite.</p>
-          <p className="font-mono text-3xl font-bold tracking-[0.3em] text-primary" data-testid="room-code">
-            {state.code}
-          </p>
-          <Button variant="outline" size="sm" onClick={copy}>
-            <Copy /> Copiar link
-          </Button>
-        </div>
+        <InvitePanel state={state} isHost={isHost} />
       );
     }
     const isOnline = online.includes(player.userId);
@@ -148,7 +131,7 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
               : "Os dois jogadores estão prontos. Aguardando o anfitrião iniciar o draft."
             : guest
               ? "Os dois jogadores precisam selecionar um deck válido e confirmar prontidão."
-              : "Compartilhe o código da sala com seu oponente."}
+              : "Convide um oponente para a vaga livre."}
         </p>
         <div className="flex flex-wrap gap-2">
           {!mySeat ? null : isHost ? (

@@ -23,6 +23,10 @@ export default async function AdminSettingsPage() {
           tiePolicy: competitive.tiePolicy,
           minResultSeconds: competitive.minResultSeconds,
           maxResultSeconds: competitive.maxResultSeconds,
+          curveFourStar: competitive.constellationCurve.fourStar,
+          curveFiveStar: competitive.constellationCurve.fiveStar,
+          level95Bonus: competitive.levelBonus.level95,
+          level100Bonus: competitive.levelBonus.level100,
         }}
       />
       <BalanceSettingsForm initial={balance} />

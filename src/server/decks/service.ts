@@ -3,8 +3,8 @@ import { evaluateDeck, type DeckEvaluation } from "@/domain/deck";
 import type { SessionUser } from "../auth/session";
 import { prisma, type Tx } from "../db";
 import { AppError } from "../errors";
-import { getActivePriceVersion, getCompetitivePriceMap } from "../pricing/service";
-import { getSettings } from "../settings";
+import { getActivePriceVersion, getUserCostMap, type UserCostMap } from "../pricing/service";
+import { costRulesOf, getSettings } from "../settings";
 import { parseInput } from "../validation";
 
 export const MAX_DECKS_PER_USER = 30;
@@ -19,21 +19,34 @@ export async function getDeckRules(db: Tx = prisma) {
   return {
     budget: settings.deckBudget,
     minSize: settings.draft.picksPerPlayer + settings.draft.bansPerPlayer,
+    costRules: costRulesOf(settings),
   };
 }
 
-/** Avalia decks contra a tabela vigente. Decks nunca são apagados por ficarem inválidos. */
-export async function evaluateDecks<T extends { characters: { characterId: string }[] }>(decks: T[], db: Tx = prisma) {
+/** Custos efetivos do jogador na tabela vigente (vazio se ainda não houver tabela). */
+export async function getActiveUserCosts(userId: string, db: Tx = prisma): Promise<UserCostMap> {
   const version = await getActivePriceVersion(db);
-  const prices = version ? await getCompetitivePriceMap(version.id, db) : new Map<string, number>();
+  const { costRules } = await getDeckRules(db);
+  if (!version) return { prices: new Map(), owned: new Set(), details: new Map() };
+  return getUserCostMap(userId, version.id, costRules, db);
+}
+
+/**
+ * Avalia decks do jogador contra a tabela vigente e a conta dele (constelação/nível).
+ * Decks nunca são apagados por ficarem inválidos.
+ */
+export async function evaluateUserDecks<T extends { characters: { characterId: string }[] }>(userId: string, decks: T[], db: Tx = prisma) {
+  const costs = await getActiveUserCosts(userId, db);
   const rules = await getDeckRules(db);
   return decks.map((deck) => ({
     deck,
     evaluation: evaluateDeck(
       deck.characters.map((c) => c.characterId),
-      prices,
+      costs.prices,
       rules,
+      costs.owned,
     ),
+    costs,
   }));
 }
 
@@ -46,8 +59,13 @@ export async function listUserDecks(userId: string, db: Tx = prisma) {
     },
   });
   const user = await db.user.findUnique({ where: { id: userId }, select: { defaultDeckId: true } });
-  const evaluated = await evaluateDecks(decks, db);
-  return evaluated.map(({ deck, evaluation }) => ({ ...deck, evaluation, isDefault: user?.defaultDeckId === deck.id }));
+  const evaluated = await evaluateUserDecks(userId, decks, db);
+  return evaluated.map(({ deck, evaluation, costs }) => ({
+    ...deck,
+    evaluation,
+    isDefault: user?.defaultDeckId === deck.id,
+    characters: deck.characters.map((c) => ({ ...c, owned: costs.details.get(c.characterId) ?? null })),
+  }));
 }
 
 export async function getUserDeck(userId: string, deckId: string, db: Tx = prisma) {
@@ -56,10 +74,12 @@ export async function getUserDeck(userId: string, deckId: string, db: Tx = prism
   return deck;
 }
 
-async function assertValidComposition(characterIds: string[], db: Tx): Promise<DeckEvaluation> {
+async function assertValidComposition(userId: string, characterIds: string[], db: Tx): Promise<DeckEvaluation> {
   const version = await getActivePriceVersion(db);
   if (!version) throw new AppError("UNAVAILABLE", "Nenhuma tabela de preços publicada ainda.");
-  const evaluation = evaluateDeck(characterIds, await getCompetitivePriceMap(version.id, db), await getDeckRules(db));
+  const costs = await getActiveUserCosts(userId, db);
+  const rules = await getDeckRules(db);
+  const evaluation = evaluateDeck(characterIds, costs.prices, rules, costs.owned);
   if (!evaluation.valid) {
     throw new AppError("DECK_INVALID", evaluation.issues[0]!.message, { evaluation });
   }
@@ -70,7 +90,7 @@ export async function createDeck(user: SessionUser, input: unknown, db = prisma)
   const data = parseInput(deckInputSchema, input);
   const count = await db.deck.count({ where: { userId: user.id } });
   if (count >= MAX_DECKS_PER_USER) throw new AppError("CONFLICT", `Limite de ${MAX_DECKS_PER_USER} decks atingido`);
-  await assertValidComposition(data.characterIds, db);
+  await assertValidComposition(user.id, data.characterIds, db);
   return db.$transaction(async (tx) => {
     const deck = await tx.deck.create({
       data: { userId: user.id, name: data.name, characters: { create: data.characterIds.map((characterId) => ({ characterId })) } },
@@ -84,7 +104,7 @@ export async function createDeck(user: SessionUser, input: unknown, db = prisma)
 export async function updateDeck(user: SessionUser, deckId: string, input: unknown, db = prisma) {
   const data = parseInput(deckInputSchema, input);
   await getUserDeck(user.id, deckId, db);
-  await assertValidComposition(data.characterIds, db);
+  await assertValidComposition(user.id, data.characterIds, db);
   return db.$transaction(async (tx) => {
     await tx.deckCharacter.deleteMany({ where: { deckId } });
     const deck = await tx.deck.update({

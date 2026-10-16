@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Layers as LayersIcon } from "lucide-react";
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
 import { CharacterIcon } from "@/components/character-card";
@@ -18,7 +19,7 @@ export default async function DecksPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Biblioteca"
+        icon={LayersIcon} eyebrow="Biblioteca"
         title="Meus decks"
         description="Decks são avaliados sempre com a tabela de preços vigente. Se uma atualização deixar um deck acima do orçamento, ele é mantido e você pode ajustá-lo."
         actions={
@@ -42,7 +43,7 @@ export default async function DecksPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {decks.map((deck) => (
-            <article key={deck.id} className="rounded-xl border bg-card/80 p-4" data-testid="deck-card">
+            <article key={deck.id} className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-card/70 p-5" data-testid="deck-card">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate font-display text-lg font-semibold">{deck.name}</h2>
                 {deck.isDefault && <Badge variant="secondary">padrão</Badge>}
@@ -52,13 +53,24 @@ export default async function DecksPage() {
                   <span className="text-sm text-muted-foreground">/{deck.evaluation.budget}</span>
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={deck.evaluation.excess > 0 ? "h-full bg-destructive" : "h-full bg-gold"}
+                  style={{ width: `${Math.min(100, (deck.evaluation.totalCost / deck.evaluation.budget) * 100)}%` }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
                 {deck.characters.map((c) => (
-                  <CharacterIcon key={c.characterId} character={c.character} size={40} />
+                  <span key={c.characterId} className="relative">
+                    <CharacterIcon character={c.character} size={44} className={c.owned ? "" : "opacity-40 grayscale"} />
+                    {c.owned && (
+                      <span className="absolute right-0 bottom-0 rounded-tl-md bg-black/75 px-1 text-[9px] font-bold text-white">C{c.owned.constellation}</span>
+                    )}
+                  </span>
                 ))}
               </div>
               {!deck.evaluation.valid && (
-                <ul className="mt-3 grid gap-1 text-xs text-warning">
+                <ul className="grid gap-1 text-xs text-warning">
                   {deck.evaluation.issues.map((i) => (
                     <li key={i.code} className="flex gap-1.5">
                       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
@@ -67,7 +79,7 @@ export default async function DecksPage() {
                   ))}
                 </ul>
               )}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
                 <span className="text-xs text-muted-foreground">
                   {deck.evaluation.size} personagens · atualizado em {formatDate(deck.updatedAt)}
                 </span>

@@ -73,6 +73,9 @@ score = λ · score_ciclo + (1 − λ) · score_histórico
 
 ## Da pontuação ao preço
 
+As propostas ajustam o **custo base (C0)** do personagem. As constelações acompanham pela curva; ajustes fixos por constelação feitos pelo admin são mantidos e revisados à mão. As métricas são por personagem, sem distinguir constelação.
+
+
 ```
 se |score| < limiar  → sem proposta
 delta = sinal(score) · max(1, round(|score| · passo máximo))
@@ -131,8 +134,8 @@ Se a tabela vigente mudar depois de uma análise, propostas antigas não podem m
 | `weightWin` / `weightPick` / `weightBan` | 0,5 / 0,25 / 0,25 | Pesos dos sinais |
 | `historyWeight` | 0,3 | Peso do histórico com o ciclo maduro |
 | `cycleMaturityMatches` | 30 | Partidas para o ciclo atingir maturidade |
-| `maxStep` | 3 | Variação máxima por atualização (pontos) |
+| `maxStep` | 3 | Variação máxima do C0 por atualização (pontos) |
 | `actionThreshold` | 0,2 | Score mínimo para propor |
 | `historyDays` | 90 | Janela histórica |
 | `proposalWeekday` | 1 | Dia da geração regular (0 = domingo) |
-| Preço mínimo/máximo | 3 / 40 | Vêm do formato competitivo |
+| Custo base mínimo/máximo | 10 / 400 | Vêm do formato competitivo |

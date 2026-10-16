@@ -8,7 +8,7 @@ import { requireUser } from "@/server/auth/next";
 import { prisma } from "@/server/db";
 import { listUserDecks } from "@/server/decks/service";
 import { getMatchView } from "@/server/matches/view";
-import { JoinRoomForm } from "../forms";
+import { InviteResponse } from "./invite-response";
 import { MatchRoom } from "./match-room";
 
 export const metadata: Metadata = { title: "Sala" };
@@ -23,23 +23,25 @@ export default async function RoomPage({ params }: { params: Promise<{ code: str
   const isParticipant = match.players.some((p) => p.userId === user.id);
   if (!isParticipant && user.role !== "ADMIN") {
     if (match.status === "COMPLETED") redirect(`/matches/${match.id}`);
-    const host = match.players.find((p) => p.seat === "A");
-    const open = match.status === "WAITING" && match.players.length < 2;
+    const invite = await prisma.matchInvite.findFirst({
+      where: { matchId: match.id, toUserId: user.id, status: "PENDING", expiresAt: { gt: new Date() } },
+      include: { fromUser: { select: { nickname: true } } },
+    });
     return (
       <PageContainer className="max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle>Sala {match.code}</CardTitle>
+            <CardTitle>Sala privada</CardTitle>
             <CardDescription>
-              {open ? `Convite de ${host?.user.nickname} para um X1.` : "Esta sala não está aceitando novos jogadores."}
+              {invite ? `${invite.fromUser.nickname} te desafiou para um X1.` : "Só é possível entrar nesta sala por convite do anfitrião."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {open ? (
-              <JoinRoomForm code={match.code} />
+            {invite ? (
+              <InviteResponse inviteId={invite.id} />
             ) : (
               <Button asChild variant="outline">
-                <Link href="/rooms/new">Criar outra sala</Link>
+                <Link href="/play">Desafiar alguém</Link>
               </Button>
             )}
           </CardContent>

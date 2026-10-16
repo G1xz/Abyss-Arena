@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import { hashPassword } from "@/server/auth/password";
 import type { SessionUser } from "@/server/auth/session";
 import { prisma } from "@/server/db";
-import { createDeck } from "@/server/decks/service";
+import { createDeck, getActiveUserCosts, getDeckRules, listUserDecks } from "@/server/decks/service";
 import { confirmOpponentResult, submitResult } from "@/server/matches/results";
 import { createRoom, joinRoom, performDraftAction, setReady, startDraft } from "@/server/matches/service";
 import { getMatchView } from "@/server/matches/view";
@@ -18,6 +18,68 @@ import { DEFAULT_RULES, getCurrentCycle } from "@/server/abyss/service";
 const DEMO_PLAYERS = ["Kaeyaenjoyer", "PyroMain", "Speedrunner", "AbyssDiver", "HydroQueen", "GeoTank"];
 /** Personagens "fortes" na simulação, para gerar sinais visíveis no balanceamento. */
 const META = ["neuvillette", "furina", "nahida", "raiden-shogun", "kaedehara-kazuha", "xianyun", "mavuika", "citlali", "bennett", "xingqiu"];
+
+/** Conta de demonstração: todos os personagens liberados, 4★ com constelações altas, 5★ em geral C0–C2. */
+async function giveDemoRoster(userId: string, characters: { id: string; rarity: number }[], rand: () => number) {
+  await prisma.ownedCharacter.createMany({
+    data: characters.map((c) => ({
+      userId,
+      characterId: c.id,
+      constellation: c.rarity === 4 ? 2 + Math.floor(rand() * 5) : rand() < 0.7 ? 0 : 1 + Math.floor(rand() * 2),
+      level: c.rarity === 5 && rand() < 0.2 ? (rand() < 0.5 ? 95 : 100) : 90,
+    })),
+    skipDuplicates: true,
+  });
+}
+
+/** Deck dentro do orçamento: 2 "meta" + 5★ aleatórios + 4★ até completar, usando o custo efetivo da conta. */
+async function buildDemoDeck(user: SessionUser, characters: { id: string; slug: string; rarity: number }[], rand: () => number, name: string) {
+  const [{ prices }, rules] = await Promise.all([getActiveUserCosts(user.id), getDeckRules()]);
+  const bySlug = new Map(characters.map((c) => [c.slug, c]));
+  const chosen = new Set<string>();
+  let total = 0;
+  const add = (id: string) => {
+    const cost = prices.get(id);
+    if (cost === undefined || chosen.has(id) || total + cost > rules.budget) return false;
+    chosen.add(id);
+    total += cost;
+    return true;
+  };
+  const metaPool = META.map((s) => bySlug.get(s)).filter(Boolean).sort(() => rand() - 0.5);
+  for (const c of metaPool.slice(0, 2)) add(c!.id);
+  const pool = [...characters].sort(() => rand() - 0.5);
+  for (const c of pool.filter((c) => c.rarity === 5 && !c.slug.startsWith("traveler")).slice(0, 3)) add(c.id);
+  for (const c of pool.filter((c) => c.rarity === 4)) {
+    if (chosen.size >= rules.minSize + 2) break;
+    add(c.id);
+  }
+  return createDeck(user, { name, characterIds: [...chosen] });
+}
+
+/**
+ * Bancos criados antes de "Meus personagens": garante conta de personagens e um deck válido
+ * no formato atual para cada jogador de demonstração.
+ */
+export async function ensureDemoAccounts() {
+  process.env.RATE_LIMIT_DISABLED = "true";
+  const rand = rng(7);
+  const version = await getActivePriceVersion();
+  if (!version) return;
+  const prices = await getCompetitivePriceMap(version.id);
+  const characters = await prisma.character.findMany({ where: { id: { in: [...prices.keys()] } } });
+  const players = await prisma.user.findMany({ where: { email: { endsWith: "@demo.local" } }, select: { id: true, email: true, nickname: true, role: true } });
+  let updated = 0;
+  for (const user of players) {
+    if ((await prisma.ownedCharacter.count({ where: { userId: user.id } })) === 0) await giveDemoRoster(user.id, characters, rand);
+    const decks = await listUserDecks(user.id);
+    if (!decks.some((d) => d.evaluation.valid)) {
+      const deck = await buildDemoDeck(user, characters, rand, `Deck de ${user.nickname} (1000)`);
+      await prisma.user.update({ where: { id: user.id }, data: { defaultDeckId: deck.id } });
+      updated++;
+    }
+  }
+  if (updated) console.log(`[seed:demo] ${updated} jogador(es) de demonstração receberam conta de personagens e deck no formato atual.`);
+}
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -43,7 +105,6 @@ export async function seedDemoData() {
   if (!version) throw new Error("Sem tabela vigente para criar decks de demonstração");
   const prices = await getCompetitivePriceMap(version.id);
   const characters = await prisma.character.findMany({ where: { id: { in: [...prices.keys()] } } });
-  const bySlug = new Map(characters.map((c) => [c.slug, c]));
   const power = new Map(characters.map((c) => [c.id, (META.includes(c.slug) ? 3 : 0) + c.rarity - 4 + rand()]));
 
   const players: SessionUser[] = [];
@@ -54,22 +115,8 @@ export async function seedDemoData() {
       select: { id: true, email: true, nickname: true, role: true },
     });
     players.push(user);
-
-    // Deck: 2 personagens "meta" + um 5★ qualquer + 4★ até o orçamento (7–8 personagens).
-    const chosen = new Set<string>();
-    const metaPool = META.map((s) => bySlug.get(s)).filter(Boolean).sort(() => rand() - 0.5);
-    for (const c of metaPool.slice(0, 2)) chosen.add(c!.id);
-    const pool = [...characters].sort(() => rand() - 0.5);
-    const extraFive = pool.find((c) => c.rarity === 5 && !chosen.has(c.id) && !c.slug.startsWith("traveler"));
-    if (extraFive) chosen.add(extraFive.id);
-    let total = [...chosen].reduce((sum, id) => sum + prices.get(id)!, 0);
-    for (const c of pool) {
-      const cost = prices.get(c.id)!;
-      if (chosen.has(c.id) || c.rarity !== 4 || total + cost > 100) continue;
-      chosen.add(c.id);
-      total += cost;
-    }
-    await createDeck(user, { name: `Deck de ${nick}`, characterIds: [...chosen] });
+    await giveDemoRoster(user.id, characters, rand);
+    await buildDemoDeck(user, characters, rand, `Deck de ${nick}`);
   }
 
   const matchIds: string[] = [];

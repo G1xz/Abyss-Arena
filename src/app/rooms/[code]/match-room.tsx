@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Copy, History, Wifi, WifiOff } from "lucide-react";
+import { History, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { MatchStatusBadge } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -33,24 +33,12 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
   const inLobby = state.status === "WAITING" || state.status === "READY";
   const afterDraft = ["LOCKED", "AWAITING_RESULTS", "DISPUTED", "COMPLETED"].includes(state.status);
 
-  const copyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/rooms/${state.code}`);
-      toast.success("Link de convite copiado");
-    } catch {
-      toast.message(state.code);
-    }
-  };
-
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6" data-testid="match-room" data-status={state.status}>
       <header className="mb-5 flex flex-wrap items-center gap-3">
         <div>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Sala</p>
-          <button type="button" onClick={copyCode} className="flex items-center gap-2 font-mono text-2xl font-bold tracking-[0.2em]" title="Copiar link de convite">
-            {state.code}
-            <Copy className="size-4 text-muted-foreground" />
-          </button>
+          <p className="font-mono text-2xl font-bold tracking-[0.2em]">{state.code}</p>
         </div>
         <MatchStatusBadge status={state.status} />
         <div className="flex items-center gap-2 text-sm">
@@ -84,7 +72,7 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
         <div className="rounded-xl border bg-card/70 p-6 text-center">
           <p className="font-semibold">Você não participa mais desta sala.</p>
           <Button asChild className="mt-3">
-            <Link href="/rooms/new">Criar nova sala</Link>
+            <Link href="/play">Desafiar alguém</Link>
           </Button>
         </div>
       ) : (
@@ -95,7 +83,7 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
                 <p className="font-display text-lg font-semibold">Sala cancelada</p>
                 <p className="text-sm text-muted-foreground">{state.cancelReason}</p>
                 <Button asChild className="mt-3">
-                  <Link href="/rooms/new">Criar nova sala</Link>
+                  <Link href="/play">Desafiar alguém</Link>
                 </Button>
               </div>
             )}

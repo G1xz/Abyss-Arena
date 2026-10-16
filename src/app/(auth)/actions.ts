@@ -17,7 +17,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   } catch (err) {
     return { ...toErrorResult(err), values: echoValues(input, ["email", "nickname", "genshinUid"]) };
   }
-  redirect("/decks/new?welcome=1");
+  redirect("/roster?welcome=1");
 }
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {

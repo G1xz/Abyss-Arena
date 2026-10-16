@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Trophy as TrophyIcon } from "lucide-react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { EmptyState, PageContainer, PageHeader } from "@/components/page";
@@ -15,7 +16,7 @@ export default async function RankingPage() {
   return (
     <PageContainer className="max-w-4xl">
       <PageHeader
-        eyebrow="Competitivo"
+        icon={TrophyIcon} eyebrow="Competitivo"
         title="Ranking de jogadores"
         description="Ordem: mais vitórias → maior taxa de vitória → menos derrotas. Só contam partidas com resultado validado."
       />

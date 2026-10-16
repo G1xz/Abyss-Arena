@@ -1,6 +1,6 @@
 /** Regras de deck (puras): custo, orçamento e composição mínima. */
 
-export type DeckIssueCode = "DUPLICATE" | "OVER_BUDGET" | "TOO_FEW" | "UNAVAILABLE" | "EMPTY_NAME";
+export type DeckIssueCode = "DUPLICATE" | "OVER_BUDGET" | "TOO_FEW" | "UNAVAILABLE" | "NOT_OWNED" | "EMPTY_NAME";
 
 export interface DeckIssue {
   code: DeckIssueCode;
@@ -27,9 +27,15 @@ export interface DeckRules {
 
 /**
  * Avalia um deck contra uma tabela de preços.
- * `prices` contém apenas personagens disponíveis para competição (habilitados e com preço).
+ * `prices` contém o custo efetivo (constelação/nível do jogador) dos personagens disponíveis para
+ * competição. `owned`, quando informado, é o conjunto de personagens que o jogador tem na conta.
  */
-export function evaluateDeck(characterIds: string[], prices: ReadonlyMap<string, number>, rules: DeckRules): DeckEvaluation {
+export function evaluateDeck(
+  characterIds: string[],
+  prices: ReadonlyMap<string, number>,
+  rules: DeckRules,
+  owned?: ReadonlySet<string>,
+): DeckEvaluation {
   const issues: DeckIssue[] = [];
   const seen = new Set<string>();
   const duplicates = new Set<string>();
@@ -42,11 +48,19 @@ export function evaluateDeck(characterIds: string[], prices: ReadonlyMap<string,
   }
 
   const unavailable: string[] = [];
+  const notOwned: string[] = [];
   let totalCost = 0;
   for (const id of seen) {
+    if (owned && !owned.has(id)) {
+      notOwned.push(id);
+      continue;
+    }
     const cost = prices.get(id);
     if (cost === undefined) unavailable.push(id);
     else totalCost += cost;
+  }
+  if (notOwned.length > 0) {
+    issues.push({ code: "NOT_OWNED", message: "Há personagens que não estão na sua conta (atualize “Meus personagens”).", characterIds: notOwned });
   }
   if (unavailable.length > 0) {
     issues.push({

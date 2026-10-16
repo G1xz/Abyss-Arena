@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { PriceChangeSource } from "@/generated/prisma/client";
+import { effectiveCost, parseOverrides, type ConstellationOverrides, type CostRules } from "@/domain/pricing";
+import { Prisma, type PriceChangeSource } from "@/generated/prisma/client";
 import { writeAuditLog } from "../audit";
 import { assertAdmin } from "../auth/accounts";
 import type { SessionUser } from "../auth/session";
@@ -27,6 +28,35 @@ export async function getCompetitivePriceMap(priceVersionId: string, db: Tx = pr
   return new Map(prices.map((p) => [p.characterId, p.cost]));
 }
 
+export interface UserCostMap {
+  /** Custo efetivo (constelação/nível do jogador) dos personagens que ele tem e que estão liberados com preço. */
+  prices: Map<string, number>;
+  /** Personagens declarados na conta. */
+  owned: Set<string>;
+  details: Map<string, { constellation: number; level: number; baseCost: number; cost: number }>;
+}
+
+/** Custos efetivos para um jogador, a partir da conta dele (Meus personagens) e de uma versão da tabela. */
+export async function getUserCostMap(userId: string, priceVersionId: string, rules: CostRules, db: Tx = prisma): Promise<UserCostMap> {
+  // Sequencial: pode rodar dentro de uma transação (uma única conexão).
+  const roster = await db.ownedCharacter.findMany({ where: { userId }, include: { character: { select: { rarity: true, competitiveEnabled: true } } } });
+  const prices = await db.characterPrice.findMany({ where: { priceVersionId }, select: { characterId: true, cost: true, constellationOverrides: true } });
+  const priceById = new Map(prices.map((p) => [p.characterId, p]));
+  const result: UserCostMap = { prices: new Map(), owned: new Set(), details: new Map() };
+  for (const owned of roster) {
+    result.owned.add(owned.characterId);
+    const price = priceById.get(owned.characterId);
+    if (!price || !owned.character.competitiveEnabled) continue;
+    const cost = effectiveCost(
+      { baseCost: price.cost, rarity: owned.character.rarity, constellation: owned.constellation, level: owned.level, overrides: parseOverrides(price.constellationOverrides) },
+      rules,
+    );
+    result.prices.set(owned.characterId, cost);
+    result.details.set(owned.characterId, { constellation: owned.constellation, level: owned.level, baseCost: price.cost, cost });
+  }
+  return result;
+}
+
 /** Catálogo com custo na tabela vigente — base do construtor de decks. */
 export async function getCatalogWithActivePrices(db: Tx = prisma) {
   const version = await getActivePriceVersion(db);
@@ -37,7 +67,7 @@ export async function getCatalogWithActivePrices(db: Tx = prisma) {
   return {
     version,
     characters: characters.map((c) => {
-      const price = (c as typeof c & { prices?: { cost: number; isProvisional: boolean }[] }).prices?.[0];
+      const price = (c as typeof c & { prices?: { cost: number; isProvisional: boolean; constellationOverrides: Prisma.JsonValue }[] }).prices?.[0];
       return {
         id: c.id,
         slug: c.slug,
@@ -50,6 +80,7 @@ export async function getCatalogWithActivePrices(db: Tx = prisma) {
         missingFromSource: c.missingFromSource,
         balanceLocked: c.balanceLocked,
         cost: price?.cost ?? null,
+        overrides: parseOverrides(price?.constellationOverrides),
         isProvisional: price?.isProvisional ?? false,
         available: c.competitiveEnabled && price !== undefined,
       };
@@ -79,7 +110,14 @@ export async function ensureDraft(tx: Tx, adminId: string | null) {
       basedOnId: active?.id ?? null,
       createdById: adminId,
       prices: active
-        ? { create: active.prices.map((p) => ({ characterId: p.characterId, cost: p.cost, isProvisional: p.isProvisional })) }
+        ? {
+            create: active.prices.map((p) => ({
+              characterId: p.characterId,
+              cost: p.cost,
+              constellationOverrides: (p.constellationOverrides ?? undefined) as Prisma.InputJsonValue | undefined,
+              isProvisional: p.isProvisional,
+            })),
+          }
         : undefined,
     },
     include: { prices: true },
@@ -87,9 +125,12 @@ export async function ensureDraft(tx: Tx, adminId: string | null) {
   return created;
 }
 
+const overrideValue = z.coerce.number().int("Ajustes devem ser inteiros").positive("Ajustes devem ser positivos").max(10_000);
 export const setPriceSchema = z.object({
   characterId: z.string().min(1).max(64),
   cost: z.coerce.number().int("O preço deve ser inteiro"),
+  /** Ajustes absolutos por constelação (C1..C6). Ausente = mantém os atuais; objeto vazio = remove todos. */
+  overrides: z.partialRecord(z.enum(["1", "2", "3", "4", "5", "6"]), overrideValue).optional(),
   justification: z.string().trim().min(3, "Informe uma justificativa").max(500),
 });
 
@@ -100,7 +141,7 @@ export const setPriceSchema = z.object({
 export async function setDraftPriceTx(
   tx: Tx,
   admin: SessionUser,
-  input: { characterId: string; cost: number; justification: string },
+  input: { characterId: string; cost: number; justification: string; overrides?: ConstellationOverrides },
   source: PriceChangeSource,
   proposalId: string | null = null,
 ) {
@@ -119,12 +160,15 @@ export async function setDraftPriceTx(
   const basePrice = draft.basedOnId
     ? await tx.characterPrice.findUnique({ where: { priceVersionId_characterId: { priceVersionId: draft.basedOnId, characterId: input.characterId } } })
     : null;
-  const before = draft.prices.find((p) => p.characterId === input.characterId)?.cost ?? null;
+  const draftPrice = draft.prices.find((p) => p.characterId === input.characterId);
+  const before = draftPrice?.cost ?? null;
+  const overrides = input.overrides ?? parseOverrides(draftPrice?.constellationOverrides);
+  const overridesJson = (Object.keys(overrides).length ? overrides : undefined) as Prisma.InputJsonValue | undefined;
 
   await tx.characterPrice.upsert({
     where: { priceVersionId_characterId: { priceVersionId: draft.id, characterId: input.characterId } },
-    create: { priceVersionId: draft.id, characterId: input.characterId, cost: input.cost, isProvisional: false },
-    update: { cost: input.cost, isProvisional: false },
+    create: { priceVersionId: draft.id, characterId: input.characterId, cost: input.cost, constellationOverrides: overridesJson, isProvisional: false },
+    update: { cost: input.cost, constellationOverrides: overridesJson ?? Prisma.DbNull, isProvisional: false },
   });
 
   // Se havia uma proposta vinculada a uma alteração anterior deste personagem, ela é substituída.
@@ -135,6 +179,8 @@ export async function setDraftPriceTx(
       characterId: input.characterId,
       previousCost: basePrice?.cost ?? null,
       newCost: input.cost,
+      previousOverrides: (basePrice?.constellationOverrides ?? undefined) as Prisma.InputJsonValue | undefined,
+      newOverrides: overridesJson,
       source,
       justification: input.justification,
       adminId: admin.id,
@@ -142,6 +188,7 @@ export async function setDraftPriceTx(
     },
     update: {
       newCost: input.cost,
+      newOverrides: overridesJson ?? Prisma.DbNull,
       source,
       justification: input.justification,
       adminId: admin.id,
@@ -156,8 +203,8 @@ export async function setDraftPriceTx(
     entityType: "Character",
     entityId: input.characterId,
     reason: input.justification,
-    before: { cost: before, draftVersionId: draft.id },
-    after: { cost: input.cost, draftVersionId: draft.id, proposalId },
+    before: { cost: before, overrides: draftPrice?.constellationOverrides ?? null, draftVersionId: draft.id },
+    after: { cost: input.cost, overrides: overridesJson ?? null, draftVersionId: draft.id, proposalId },
   });
   return { draftId: draft.id, change };
 }
@@ -183,7 +230,7 @@ export async function revertDraftPrice(admin: SessionUser, characterId: string, 
     if (base) {
       await tx.characterPrice.update({
         where: { priceVersionId_characterId: { priceVersionId: draft.id, characterId } },
-        data: { cost: base.cost, isProvisional: base.isProvisional },
+        data: { cost: base.cost, constellationOverrides: (base.constellationOverrides ?? Prisma.DbNull) as Prisma.InputJsonValue, isProvisional: base.isProvisional },
       });
     } else {
       await tx.characterPrice.deleteMany({ where: { priceVersionId: draft.id, characterId } });
@@ -353,6 +400,48 @@ export async function publishInitialPriceVersion(
             newCost: p.cost,
             source: "INITIAL" as const,
             justification: "Preço inicial provisório",
+            adminId: options.adminId,
+          })),
+        },
+      },
+    });
+    return publishVersionTx(tx, version.id, options.adminId, options.now ?? new Date());
+  });
+}
+
+/**
+ * Publica uma nova tabela provisória completa (ex.: mudança de escala do orçamento), preservando
+ * as versões anteriores no histórico. Usada pelo seed; exige que não haja rascunho/agendamento aberto.
+ */
+export async function publishProvisionalTable(
+  prices: { characterId: string; cost: number }[],
+  options: { adminId: string | null; label: string; justification: string; db?: Db; now?: Date },
+) {
+  const db = options.db ?? prisma;
+  return db.$transaction(async (tx) => {
+    await lockPricing(tx);
+    // Rascunho vazio (sem alterações) pode ser descartado; com alterações, a decisão é do admin.
+    await tx.priceVersion.deleteMany({ where: { status: "DRAFT", changes: { none: {} } } });
+    if (await tx.priceVersion.findFirst({ where: { status: { in: ["DRAFT", "SCHEDULED"] } } })) {
+      throw new AppError("CONFLICT", "Há um rascunho ou agendamento aberto; publique ou descarte antes.");
+    }
+    const active = await tx.priceVersion.findFirst({ where: { status: "ACTIVE" }, include: { prices: true } });
+    const previous = new Map(active?.prices.map((p) => [p.characterId, p.cost]) ?? []);
+    const version = await tx.priceVersion.create({
+      data: {
+        status: "DRAFT",
+        label: options.label,
+        notes: "Preços provisórios por raridade. Não representam balanceamento competitivo validado.",
+        basedOnId: active?.id ?? null,
+        createdById: options.adminId,
+        prices: { create: prices.map((p) => ({ characterId: p.characterId, cost: p.cost, isProvisional: true })) },
+        changes: {
+          create: prices.map((p) => ({
+            characterId: p.characterId,
+            previousCost: previous.get(p.characterId) ?? null,
+            newCost: p.cost,
+            source: "INITIAL" as const,
+            justification: options.justification,
             adminId: options.adminId,
           })),
         },

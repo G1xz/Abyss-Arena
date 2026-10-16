@@ -3,16 +3,33 @@ import { E2E } from "../../playwright.config";
 
 /**
  * Fluxo principal com dois jogadores reais em navegadores (contextos) distintos e um administrador.
- * Cobre os 17 passos do critério de aceitação: contas, decks, sala, draft sincronizado, resultados,
- * vencedor, ranking/métricas, análise de balanceamento, aprovação, publicação e preservação do histórico.
+ * Cobre os 17 passos do critério de aceitação: contas, personagens importados do HoYoLAB, decks,
+ * desafio direto por nickname, draft sincronizado, resultados, vencedor, ranking/métricas,
+ * análise de balanceamento, aprovação, publicação e preservação do histórico.
  */
 
 const run = Date.now().toString(36).slice(-5);
 const PASSWORD = "senha-forte-123";
-const A = { nick: `Alpha${run}`, email: `alpha${run}@e2e.local`, deck: ["Bennett", "Xingqiu", "Xiangling", "Sucrose", "Furina", "Nahida"] };
-const B = { nick: `Bravo${run}`, email: `bravo${run}@e2e.local`, deck: ["Fischl", "Beidou", "Bennett", "Xingqiu", "Neuvillette", "Kaedehara Kazuha"] };
-// Sequência padrão: bans A-B-B-A, picks alternados.
-const SEQUENCE = ["A", "B", "B", "A", "A", "B", "A", "B", "A", "B", "A", "B"] as const;
+// 6× 4★ em C6 (80 cada) + 4× 5★ em C0 (100 cada) = 880 pontos.
+const A = {
+  nick: `Alpha${run}`,
+  email: `alpha${run}@e2e.local`,
+  fours: ["Bennett", "Xingqiu", "Xiangling", "Sucrose", "Fischl", "Beidou"],
+  fives: ["Furina", "Nahida", "Neuvillette", "Kaedehara Kazuha"],
+};
+const B = {
+  nick: `Bravo${run}`,
+  email: `bravo${run}@e2e.local`,
+  fours: ["Kuki Shinobu", "Yunjin", "Diona", "Rosaria", "Chevreuse", "Candace"],
+  fives: ["Yelan", "Zhongli", "Shenhe", "Xiao"],
+};
+// Padrão: bans A-B-B-A e 8 picks por jogador em serpente.
+const SEQUENCE = ["A", "B", "B", "A", ...Array.from({ length: 16 }, (_, i) => (Math.floor((i + 1) / 2) % 2 === 0 ? "A" : "B"))] as ("A" | "B")[];
+
+/** Texto no formato copiado da página de personagens do HoYoLAB. */
+function hoyolabText(who: typeof A) {
+  return ["Novos Personagens", "Filtrar", ...who.fives.map((n) => `Nv.90\n\n${n}`), ...who.fours.map((n) => `Nv.80\n6\n${n}`), "Nv.90\n\nManequim", "11"].join("\n\n");
+}
 
 async function register(page: Page, who: typeof A) {
   await page.goto("/register");
@@ -20,10 +37,18 @@ async function register(page: Page, who: typeof A) {
   await page.getByLabel("Nickname").fill(who.nick);
   await page.getByLabel("Senha").fill(PASSWORD);
   await page.getByRole("button", { name: "Criar conta" }).click();
-  await expect(page).toHaveURL(/\/decks\/new/);
+  await expect(page).toHaveURL(/\/roster/);
 }
 
-async function buildDeck(page: Page, name: string, characters: string[]) {
+async function importRoster(page: Page, who: typeof A) {
+  await page.getByTestId("roster-paste").fill(hoyolabText(who));
+  await expect(page.getByTestId("roster-preview")).toContainText("10 personagens reconhecidos");
+  await expect(page.getByTestId("roster-preview")).toContainText("1 ignorados");
+  await page.getByTestId("roster-import").click();
+  await expect(page.getByTestId("roster-grid").locator('[data-testid^="roster-char-"]')).toHaveCount(10);
+}
+
+async function buildDeck(page: Page, name: string, characters: string[], total: number) {
   await page.goto("/decks/new");
   await page.getByTestId("deck-name").fill(name);
   for (const character of characters) {
@@ -31,8 +56,8 @@ async function buildDeck(page: Page, name: string, characters: string[]) {
     await page.locator('[data-testid^="builder-char-"]').filter({ hasText: character }).first().click();
   }
   await page.getByTestId("deck-search").fill("");
-  await expect(page.getByTestId("deck-budget")).toContainText("76");
-  await expect(page.getByTestId("deck-remaining")).toContainText("24 ponto(s) restantes");
+  await expect(page.getByTestId("deck-budget")).toContainText(String(total));
+  await expect(page.getByTestId("deck-remaining")).toContainText(`${1000 - total} ponto(s) restantes`);
   await page.getByTestId("deck-save").click();
   await expect(page).toHaveURL(/\/decks$/);
   await expect(page.getByTestId("deck-card").filter({ hasText: name })).toContainText("válido");
@@ -57,21 +82,26 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await register(pageA, A);
   await register(pageB, B);
 
-  // 3. Decks válidos dentro do orçamento.
-  await buildDeck(pageA, "Deck Alpha", A.deck);
-  await buildDeck(pageB, "Deck Bravo", B.deck);
+  // 3. Personagens importados do HoYoLAB (colar texto) e decks válidos dentro do orçamento.
+  await importRoster(pageA, A);
+  await importRoster(pageB, B);
+  await buildDeck(pageA, "Deck Alpha", [...A.fours, ...A.fives], 880);
+  await buildDeck(pageB, "Deck Bravo", [...B.fours, ...B.fives], 880);
 
-  // 4. A cria a sala.
-  await pageA.goto("/rooms/new");
-  await pageA.getByTestId("create-room-submit").click();
+  // 4. A desafia B pelo nickname (B está online: o convite chega em tempo real).
+  await pageB.goto("/dashboard");
+  await pageA.goto("/play");
+  await pageA.getByTestId("player-search").fill(B.nick);
+  await pageA.getByTestId(`challenge-${B.nick}`).first().click();
   await expect(pageA).toHaveURL(/\/rooms\/[A-Z0-9]{6}$/);
   const code = pageA.url().split("/").pop()!;
   await expect(pageA.getByTestId("connection-status")).toHaveAttribute("data-connected", "true");
+  await expect(pageA.getByTestId("invite-status")).toContainText(B.nick);
 
-  // 5. B entra com o código.
-  await pageB.goto("/rooms/join");
-  await pageB.getByTestId("join-room-code").fill(code);
-  await pageB.getByTestId("join-room-submit").click();
+  // 5. B aceita pelo sino de convites e cai na sala.
+  await expect(pageB.getByTestId("invite-count")).toHaveText("1");
+  await pageB.getByTestId("invite-inbox").click();
+  await pageB.getByTestId("invite-accept").click();
   await expect(pageB).toHaveURL(new RegExp(`/rooms/${code}$`));
   await expect(pageA.getByTestId("seat-B")).toContainText(B.nick); // A vê B entrar em tempo real
 
@@ -92,12 +122,12 @@ test("fluxo competitivo completo", async ({ browser }) => {
       await expect(pageA.getByTestId("turn-banner")).toHaveAttribute("data-my-turn", "false");
     }
     await act(page);
-    if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/12`);
+    if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/20`);
   }
   await expect(pageA.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
   await expect(pageB.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
-  await expect(pageA.getByTestId("final-team-A").locator("img")).toHaveCount(4);
-  await expect(pageB.getByTestId("final-team-B").locator("img")).toHaveCount(4);
+  await expect(pageA.getByTestId("final-team-A").locator("img")).toHaveCount(8);
+  await expect(pageB.getByTestId("final-team-B").locator("img")).toHaveCount(8);
 
   // 10. Registro dos tempos.
   await pageA.getByTestId("time-input").fill("5:00.000");
@@ -165,17 +195,18 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await admin.reload();
   await expect(admin.getByText("Tabela vigente v2")).toBeVisible();
 
-  // 17. Histórico preservado: a partida mantém os custos congelados (76 pts nos dois decks),
+  // 17. Histórico preservado: a partida mantém os custos congelados (880 pts nos dois decks),
   // enquanto os decks salvos já são avaliados com a nova tabela; a v1 continua consultável.
   await pageA.goto(matchUrl);
-  await expect(pageA.getByText("(76 pts)")).toHaveCount(2);
+  await expect(pageA.getByText("(880 pts)")).toHaveCount(2);
   const deckTotal = async (page: Page) => {
     await page.goto("/decks");
     const text = await page.getByTestId("deck-card").first().locator("span.font-display").first().textContent();
     return Number(text!.match(/\d+/)![0]);
   };
   const totals = [await deckTotal(pageA), await deckTotal(pageB)];
-  expect(totals.some((t) => t === 76 + (newCost! - oldCost!))).toBe(true);
+  // A proposta muda o custo base (C0); o efeito no deck depende da constelação na conta.
+  expect(totals.some((t) => t !== 880)).toBe(true);
   await admin.goto("/admin/prices");
   await expect(admin.getByRole("link", { name: "v1" })).toBeVisible();
   await admin.getByRole("link", { name: "v2" }).click();

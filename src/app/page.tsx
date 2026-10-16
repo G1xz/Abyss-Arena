@@ -7,8 +7,8 @@ import { prisma } from "@/server/db";
 import { getCurrentCycle } from "@/server/abyss/service";
 
 const steps = [
-  { icon: Layers, title: "Monte seu deck", text: "Cada personagem custa pontos. Escolha quem levar respeitando o orçamento de 100 pontos." },
-  { icon: Ban, title: "Bans e picks ao vivo", text: "Na sala privada, cada jogador bane personagens do deck rival e escolhe seu time de 4 em turnos alternados." },
+  { icon: Layers, title: "Monte seu deck", text: "Importe seus personagens do HoYoLAB. O custo depende da constelação (e do nível nos 5★); monte o deck com até 1000 pontos." },
+  { icon: Ban, title: "Bans e picks ao vivo", text: "Desafie alguém pelo nickname. Na sala, cada jogador bane do deck rival e escolhe 8 personagens (dois times de 4) em serpente." },
   { icon: Timer, title: "Speedrun no Abismo", text: "Joguem as mesmas câmaras do Abismo Espiral no Genshin. Menor tempo total, confirmado pelos dois, vence." },
   { icon: Scale, title: "Balanceamento vivo", text: "Pick, ban e win rate geram propostas de preço revisadas por administradores a cada semana." },
 ];
@@ -26,7 +26,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 pt-14 pb-16 lg:grid-cols-[1.1fr_0.9fr] lg:pt-20">
+      <section className="mx-auto grid max-w-7xl items-center gap-10 overflow-x-clip px-4 pt-14 pb-16 lg:grid-cols-[1.1fr_0.9fr] lg:pt-20">
         <div>
           <p className="mb-3 text-xs font-semibold tracking-[0.25em] text-primary uppercase">Draft competitivo · Genshin Impact</p>
           <h1 className="text-4xl leading-tight font-bold sm:text-5xl">
@@ -35,15 +35,15 @@ export default async function HomePage() {
             <span className="bg-gradient-to-r from-primary to-[oklch(0.8_0.12_220)] bg-clip-text text-transparent">no Abismo Espiral.</span>
           </h1>
           <p className="mt-5 max-w-xl text-base text-muted-foreground">
-            Crie salas privadas de X1, faça o draft em tempo real e registre quem limpou as câmaras mais rápido. A plataforma
+            Desafie jogadores para um X1, faça o draft em tempo real e registre quem limpou as câmaras mais rápido. A plataforma
             coordena o draft e os resultados; o combate acontece no seu jogo.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             {user ? (
               <>
                 <Button asChild size="lg">
-                  <Link href="/rooms/new">
-                    Criar sala <ArrowRight />
+                  <Link href="/play">
+                    Desafiar jogador <ArrowRight />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
@@ -90,7 +90,7 @@ export default async function HomePage() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-md border border-ban/40 bg-ban/10 px-3 py-2 text-ban">2 bans por jogador</div>
-              <div className="rounded-md border border-pick/40 bg-pick/10 px-3 py-2 text-pick">4 picks alternados</div>
+              <div className="rounded-md border border-pick/40 bg-pick/10 px-3 py-2 text-pick">8 picks em serpente</div>
             </div>
           </div>
         </div>

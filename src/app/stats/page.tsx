@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BarChart3 as BarChart3Icon } from "lucide-react";
 import { ArrowDown, ArrowUp, Info } from "lucide-react";
 import { CharacterIcon, ElementDot } from "@/components/character-card";
 import { PageContainer, PageHeader, Stat } from "@/components/page";
@@ -58,7 +59,7 @@ export default async function StatsPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="Meta"
+        icon={BarChart3Icon} eyebrow="Meta"
         title="Estatísticas dos personagens"
         description="Calculadas apenas sobre partidas com resultado validado (confirmado pelos dois jogadores ou resolvido pela administração)."
       />

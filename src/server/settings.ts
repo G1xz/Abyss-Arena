@@ -1,20 +1,24 @@
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { buildSequence, DRAFT_PRESETS, validateDraftConfig, type DraftConfig } from "@/domain/draft";
+import { DEFAULT_COST_RULES, type CostRules } from "@/domain/pricing";
 import { prisma, type Tx } from "./db";
 
 const draftStepSchema = z.object({ type: z.enum(["BAN", "PICK"]), actor: z.enum(["A", "B"]) });
+const curveSchema = z.array(z.number().min(0).max(500)).length(7);
 
 export const competitiveSettingsSchema = z
   .object({
-    deckBudget: z.number().int().min(10).max(1000),
-    minCharacterCost: z.number().int().min(1).max(100),
-    maxCharacterCost: z.number().int().min(1).max(200),
+    deckBudget: z.number().int().min(10).max(100_000),
+    minCharacterCost: z.number().int().min(1).max(10_000),
+    maxCharacterCost: z.number().int().min(1).max(10_000),
+    constellationCurve: z.object({ fourStar: curveSchema, fiveStar: curveSchema }),
+    levelBonus: z.object({ level95: z.number().min(0).max(200), level100: z.number().min(0).max(200) }),
     draftPreset: z.enum(Object.keys(DRAFT_PRESETS) as [keyof typeof DRAFT_PRESETS, ...(keyof typeof DRAFT_PRESETS)[]]).or(z.literal("CUSTOM")),
     draft: z.object({
       bansPerPlayer: z.number().int().min(0).max(10),
-      picksPerPlayer: z.number().int().min(1).max(8),
-      sequence: z.array(draftStepSchema).min(1).max(40),
+      picksPerPlayer: z.number().int().min(1).max(12),
+      sequence: z.array(draftStepSchema).min(1).max(60),
       turnTimeoutSeconds: z.number().int().positive().nullable().optional(),
     }),
     tiePolicy: z.enum(["DRAW", "FIRST_SUBMITTED_WINS"]),
@@ -34,14 +38,17 @@ export const competitiveSettingsSchema = z
 export type CompetitiveSettings = z.infer<typeof competitiveSettingsSchema>;
 
 export const DEFAULT_COMPETITIVE_SETTINGS: CompetitiveSettings = {
-  deckBudget: 100,
-  minCharacterCost: 3,
-  maxCharacterCost: 40,
-  draftPreset: "BANS_FIRST_ALTERNATE",
+  deckBudget: 1000,
+  minCharacterCost: 10,
+  maxCharacterCost: 400,
+  constellationCurve: DEFAULT_COST_RULES.constellationCurve,
+  levelBonus: DEFAULT_COST_RULES.levelBonus,
+  // 8 picks por jogador (dois times de 4: metade de cima e metade de baixo), ordem em serpente.
+  draftPreset: "BANS_FIRST_SNAKE",
   draft: {
     bansPerPlayer: 2,
-    picksPerPlayer: 4,
-    sequence: buildSequence("BANS_FIRST_ALTERNATE", 2, 4),
+    picksPerPlayer: 8,
+    sequence: buildSequence("BANS_FIRST_SNAKE", 2, 8),
     turnTimeoutSeconds: null,
   },
   tiePolicy: "DRAW",
@@ -129,6 +136,12 @@ export interface MatchConfig {
   tiePolicy: CompetitiveSettings["tiePolicy"];
   minResultSeconds: number;
   maxResultSeconds: number;
+  /** Regras de custo vigentes na criação da sala (os custos efetivos ficam congelados no snapshot). */
+  costRules: CostRules;
+}
+
+export function costRulesOf(settings: Pick<CompetitiveSettings, "constellationCurve" | "levelBonus">): CostRules {
+  return { constellationCurve: settings.constellationCurve, levelBonus: settings.levelBonus };
 }
 
 export function toMatchConfig(settings: CompetitiveSettings): MatchConfig {
@@ -139,5 +152,6 @@ export function toMatchConfig(settings: CompetitiveSettings): MatchConfig {
     tiePolicy: settings.tiePolicy,
     minResultSeconds: settings.minResultSeconds,
     maxResultSeconds: settings.maxResultSeconds,
+    costRules: costRulesOf(settings),
   };
 }

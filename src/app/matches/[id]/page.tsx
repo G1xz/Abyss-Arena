@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Ban, ExternalLink, Trophy } from "lucide-react";
-import { CharacterIcon } from "@/components/character-card";
+import { CharacterIcon, ConstellationBadge } from "@/components/character-card";
 import { MatchStatusBadge, PageContainer, PageHeader } from "@/components/page";
 import { Badge } from "@/components/ui/misc";
 import type { Seat } from "@/domain/draft";
@@ -98,6 +98,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                       <div key={c.characterId} className="flex flex-col items-center gap-1 text-center">
                         <CharacterIcon character={c} size={56} />
                         <span className="w-full truncate text-xs">{c.name}</span>
+                        <ConstellationBadge constellation={c.constellation} level={c.level} rarity={c.rarity} />
                         <span className="text-[10px] text-gold">{c.cost} pts</span>
                       </div>
                     ))}

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge, NativeSelect } from "@/components/ui/misc";
 import { ELEMENT_META, ELEMENTS, WEAPON_LABEL, WEAPONS } from "@/domain/catalog";
 import { evaluateDeck } from "@/domain/deck";
+import { effectiveCost, type ConstellationOverrides, type CostRules } from "@/domain/pricing";
 import { cn } from "@/lib/utils";
 import { saveDeckAction } from "./actions";
 
@@ -20,9 +21,14 @@ export interface BuilderCharacter {
   weaponType: string;
   rarity: number;
   iconUrl: string | null;
-  cost: number | null;
+  baseCost: number | null;
+  overrides: ConstellationOverrides;
   isProvisional: boolean;
+  /** Liberado para competição, com preço e presente na conta do jogador. */
   available: boolean;
+  owned: boolean;
+  constellation: number | null;
+  level: number | null;
 }
 
 type SortKey = "cost-desc" | "cost-asc" | "name";
@@ -30,11 +36,13 @@ type SortKey = "cost-desc" | "cost-asc" | "name";
 export function DeckBuilder({
   characters,
   rules,
+  costRules,
   initial,
   versionLabel,
 }: {
   characters: BuilderCharacter[];
   rules: { budget: number; minSize: number };
+  costRules: CostRules;
   initial: { id?: string; name: string; characterIds: string[] };
   versionLabel: string;
 }) {
@@ -49,15 +57,28 @@ export function DeckBuilder({
   const [onlyAvailable, setOnlyAvailable] = useState(true);
   const [pending, startTransition] = useTransition();
 
-  const byId = useMemo(() => new Map(characters.map((c) => [c.id, c])), [characters]);
-  const prices = useMemo(() => new Map(characters.filter((c) => c.available && c.cost !== null).map((c) => [c.id, c.cost!])), [characters]);
-  const evaluation = evaluateDeck(selected, prices, rules);
-  const unavailableSelected = new Set(evaluation.issues.find((i) => i.code === "UNAVAILABLE")?.characterIds ?? []);
+  // Custo efetivo com a constelação/nível da conta do jogador (o servidor recalcula ao salvar).
+  const withCost = useMemo(
+    () =>
+      characters.map((c) => ({
+        ...c,
+        cost:
+          c.baseCost === null || c.constellation === null || c.level === null
+            ? null
+            : effectiveCost({ baseCost: c.baseCost, rarity: c.rarity, constellation: c.constellation, level: c.level, overrides: c.overrides }, costRules),
+      })),
+    [characters, costRules],
+  );
+  const byId = useMemo(() => new Map(withCost.map((c) => [c.id, c])), [withCost]);
+  const prices = useMemo(() => new Map(withCost.filter((c) => c.available && c.cost !== null).map((c) => [c.id, c.cost!])), [withCost]);
+  const owned = useMemo(() => new Set(withCost.filter((c) => c.owned).map((c) => c.id)), [withCost]);
+  const evaluation = evaluateDeck(selected, prices, rules, owned);
+  const unavailableSelected = new Set(evaluation.issues.filter((i) => i.code === "UNAVAILABLE" || i.code === "NOT_OWNED").flatMap((i) => i.characterIds ?? []));
   const hasProvisional = characters.some((c) => c.isProvisional);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = characters.filter(
+    const list = withCost.filter(
       (c) =>
         (!q || c.name.toLowerCase().includes(q)) &&
         (!element || c.element === element) &&
@@ -71,7 +92,7 @@ export function DeckBuilder({
       return (sort === "cost-asc" ? diff : -diff) || a.name.localeCompare(b.name);
     });
     return list;
-  }, [characters, query, element, weapon, rarity, sort, onlyAvailable]);
+  }, [withCost, query, element, weapon, rarity, sort, onlyAvailable]);
 
   const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
@@ -128,7 +149,7 @@ export function DeckBuilder({
         <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <label className="flex cursor-pointer items-center gap-2">
             <input type="checkbox" checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} className="accent-[var(--primary)]" />
-            Somente liberados para competição
+            Somente disponíveis (liberados e na sua conta)
           </label>
           <span>{visible.length} personagens</span>
           <span className="flex items-center gap-1">
@@ -193,6 +214,7 @@ export function DeckBuilder({
                 <li key={id} className={cn("flex items-center gap-2 rounded-md border bg-background/40 p-1.5", unavailableSelected.has(id) && "border-destructive/50")}>
                   <CharacterIcon character={c} size={32} />
                   <span className="min-w-0 flex-1 truncate text-sm">{c.name}</span>
+                  {c.constellation !== null && <span className="text-[10px] text-muted-foreground">C{c.constellation}</span>}
                   <ElementDot element={c.element} className="size-2" />
                   {unavailableSelected.has(id) ? <Badge variant="destructive">indisponível</Badge> : <CostPill cost={c.cost} />}
                   <button type="button" onClick={() => toggle(id)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={`Remover ${c.name}`}>

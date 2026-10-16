@@ -136,7 +136,7 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
               key={c.characterId}
               compact
               testId={`draft-char-${deckSeat}-${c.characterId}`}
-              character={{ id: c.characterId, name: c.name, element: c.element, rarity: c.rarity, iconUrl: c.iconUrl, cost: c.cost }}
+              character={{ id: c.characterId, name: c.name, element: c.element, rarity: c.rarity, iconUrl: c.iconUrl, cost: c.cost, constellation: c.constellation, level: c.level }}
               state={stateFor(deckSeat, c.characterId)}
               onClick={clickable(deckSeat, c.characterId) ? () => setCandidate(c.characterId) : undefined}
             />

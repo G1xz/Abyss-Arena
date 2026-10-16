@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, ExternalLink, Flag, Loader2, Plus, Send, Trophy } from "lucide-react";
-import { CharacterIcon } from "@/components/character-card";
+import { CharacterIcon, ConstellationBadge } from "@/components/character-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, Label, Textarea } from "@/components/ui/misc";
@@ -45,6 +45,7 @@ export function FinalTeams({ ctx }: { ctx: RoomContext }) {
                 <div key={c.characterId} className="flex flex-col items-center gap-1 text-center">
                   <CharacterIcon character={c} size={60} />
                   <span className="w-full truncate text-xs">{c.name}</span>
+                  <ConstellationBadge constellation={c.constellation} level={c.level} rarity={c.rarity} />
                 </div>
               ))}
             </div>

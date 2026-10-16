@@ -5,25 +5,25 @@
 /* Tema escuro único (identidade competitiva). Tokens no padrão shadcn/ui. */
 :root {
   color-scheme: dark;
-  --radius: 0.65rem;
-  --background: oklch(0.155 0.018 265);
-  --foreground: oklch(0.95 0.008 265);
-  --card: oklch(0.195 0.022 265);
-  --card-foreground: oklch(0.95 0.008 265);
-  --popover: oklch(0.205 0.024 265);
+  --radius: 0.75rem;
+  --background: oklch(0.15 0.016 265);
+  --foreground: oklch(0.96 0.006 265);
+  --card: oklch(0.19 0.02 265);
+  --card-foreground: oklch(0.96 0.006 265);
+  --popover: oklch(0.21 0.022 265);
   --popover-foreground: oklch(0.95 0.008 265);
   --primary: oklch(0.68 0.17 285);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.255 0.026 265);
   --secondary-foreground: oklch(0.93 0.01 265);
   --muted: oklch(0.235 0.022 265);
-  --muted-foreground: oklch(0.7 0.02 265);
+  --muted-foreground: oklch(0.72 0.018 265);
   --accent: oklch(0.28 0.04 285);
   --accent-foreground: oklch(0.96 0.01 285);
   --destructive: oklch(0.63 0.21 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.3 0.025 265);
-  --input: oklch(0.32 0.025 265);
+  --border: oklch(0.27 0.02 265);
+  --input: oklch(0.31 0.022 265);
   --ring: oklch(0.68 0.17 285);
   --gold: oklch(0.83 0.14 85);
   --ban: oklch(0.63 0.21 25);
@@ -83,8 +83,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(1200px 600px at 85% -10%, oklch(0.32 0.09 285 / 0.35), transparent 60%),
-      radial-gradient(900px 500px at -10% 10%, oklch(0.3 0.07 240 / 0.25), transparent 60%);
+      radial-gradient(1100px 520px at 80% -12%, oklch(0.32 0.09 285 / 0.28), transparent 60%),
+      radial-gradient(800px 460px at -8% 4%, oklch(0.3 0.07 240 / 0.18), transparent 60%);
     background-attachment: fixed;
     min-height: 100dvh;
   }

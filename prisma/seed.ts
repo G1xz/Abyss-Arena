@@ -2,7 +2,8 @@
  * Seed idempotente.
  *  - Conta ADMIN a partir de ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_NICKNAME (nunca fixa no código).
  *  - Catálogo de personagens (API pública; snapshot local como último recurso).
- *  - Tabela de preços inicial PROVISÓRIA por raridade, publicada como v1.
+ *  - Tabela de preços inicial PROVISÓRIA por raridade (custo base C0), publicada como v1.
+ *    Bancos com a escala antiga (orçamento 100) recebem uma nova versão provisória na escala de 1000.
  *  - Ciclo do Abismo vigente (andar 12, 3 câmaras × 2 metades).
  *  - SEED_DEMO_DATA=true: jogadores, decks e partidas de demonstração criados pelos fluxos reais.
  */
@@ -14,13 +15,14 @@ import { SnapshotCatalogProvider } from "@/server/catalog/snapshot";
 import { syncCatalog } from "@/server/catalog/sync";
 import { YattaCatalogProvider } from "@/server/catalog/yatta";
 import { prisma } from "@/server/db";
-import { publishInitialPriceVersion } from "@/server/pricing/service";
-import { seedDemoData } from "./seed-demo";
+import { publishInitialPriceVersion, publishProvisionalTable } from "@/server/pricing/service";
+import { getSettings } from "@/server/settings";
+import { ensureDemoAccounts, seedDemoData } from "./seed-demo";
 
-/** Custos provisórios — não representam balanceamento validado. */
+/** Custos base (C0) provisórios para o orçamento de 1000 — não representam balanceamento validado. */
 export function provisionalCost(c: { slug: string; rarity: number }) {
-  if (c.slug.startsWith("traveler-")) return 8;
-  return c.rarity === 5 ? 18 : 10;
+  if (c.slug.startsWith("traveler-")) return 40;
+  return c.rarity === 5 ? 100 : 40;
 }
 
 async function seedAdmin() {
@@ -71,6 +73,18 @@ async function seedPrices(adminId: string | null) {
   if (published) {
     await prisma.character.updateMany({ data: { competitiveEnabled: true } });
     console.log(`[seed] tabela v${published.number} publicada com ${characters.length} preços provisórios; personagens liberados.`);
+    return;
+  }
+  // Escala antiga (orçamento 100, 5★ = 18): publica uma nova versão provisória mantendo o histórico.
+  const budget = (await getSettings("competitive")).deckBudget;
+  const active = await prisma.priceVersion.findFirst({ where: { status: "ACTIVE" }, include: { prices: true } });
+  const maxCost = Math.max(0, ...(active?.prices.map((p) => p.cost) ?? []));
+  if (active && budget >= 500 && maxCost <= 40 && active.prices.every((p) => p.isProvisional)) {
+    const rescaled = await publishProvisionalTable(
+      characters.map((c) => ({ characterId: c.id, cost: provisionalCost(c) })),
+      { adminId, label: "Escala de 1000 pontos (provisória)", justification: "Reescala para o orçamento de 1000 pontos" },
+    );
+    console.log(`[seed] tabela v${rescaled.number} publicada na escala de 1000 pontos (v${active.number} preservada no histórico).`);
   } else {
     console.log("[seed] já existe tabela vigente; preços mantidos.");
   }
@@ -117,7 +131,10 @@ async function main() {
   await seedCatalog();
   await seedPrices(adminId);
   await seedCycle();
-  if (process.env.SEED_DEMO_DATA === "true") await seedDemoData();
+  if (process.env.SEED_DEMO_DATA === "true") {
+    await seedDemoData();
+    await ensureDemoAccounts();
+  }
   console.log("[seed] concluído.");
 }
 

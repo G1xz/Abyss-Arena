@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge, Label, NativeSelect, Table, TBody, TD, TH, THead, TR, Textarea } from "@/components/ui/misc";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, Switch } from "@/components/ui/overlays";
 import type { Signal } from "@/domain/balance";
+import { constellationTable, type ConstellationOverrides, type CostRules } from "@/domain/pricing";
 import { cn, formatDate, formatPercent } from "@/lib/utils";
 import {
   approveProposalAction,
@@ -268,8 +269,10 @@ interface PriceRow {
   rarity: number;
   iconUrl: string | null;
   activeCost: number | null;
+  activeOverrides: ConstellationOverrides;
   provisional: boolean;
   draftCost: number | null;
+  draftOverrides: ConstellationOverrides | null;
   enabled: boolean;
   locked: boolean;
   lockReason: string | null;
@@ -277,11 +280,22 @@ interface PriceRow {
   metrics: { pickRate: number; banRate: number; winRate: number; games: number } | null;
 }
 
-function PriceDialog({ row, bounds }: { row: PriceRow; bounds: { min: number; max: number } }) {
+function PriceDialog({ row, bounds, costRules }: { row: PriceRow; bounds: { min: number; max: number }; costRules: CostRules }) {
   const [open, setOpen] = useState(false);
-  const [cost, setCost] = useState(row.draftCost ?? row.activeCost ?? (row.rarity === 5 ? 18 : 10));
+  const [cost, setCost] = useState(row.draftCost ?? row.activeCost ?? (row.rarity === 5 ? 100 : 40));
+  const initialOverrides = row.draftOverrides ?? row.activeOverrides;
+  const [overrides, setOverrides] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(initialOverrides).map(([k, v]) => [k, String(v)])),
+  );
   const [justification, setJustification] = useState("");
   const { pending, run } = useRun();
+  const parsedOverrides: ConstellationOverrides = Object.fromEntries(
+    Object.entries(overrides)
+      .filter(([, v]) => v.trim() !== "" && Number(v) > 0)
+      .map(([k, v]) => [k, Math.round(Number(v))]),
+  );
+  const curveOnly = constellationTable(cost, row.rarity, null, costRules);
+  const table = constellationTable(cost, row.rarity, parsedOverrides, costRules);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -293,13 +307,36 @@ function PriceDialog({ row, bounds }: { row: PriceRow; bounds: { min: number; ma
         <DialogHeader>
           <DialogTitle>Preço de {row.name}</DialogTitle>
           <DialogDescription>
-            Vigente: {row.activeCost ?? "sem preço"}. O novo valor entra no rascunho e só vale após a publicação. Intervalo: {bounds.min}–{bounds.max}.
+            Vigente: C0 = {row.activeCost ?? "sem preço"}. O novo valor entra no rascunho e só vale após a publicação. Custo base entre {bounds.min} e {bounds.max}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="cost">Novo preço</Label>
+            <Label htmlFor="cost">Custo base (C0)</Label>
             <Input id="cost" type="number" min={bounds.min} max={bounds.max} value={cost} onChange={(e) => setCost(Number(e.target.value))} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Ajustes por constelação (vazio = segue a curva)</Label>
+            <div className="grid grid-cols-6 gap-1.5">
+              {[1, 2, 3, 4, 5, 6].map((c) => (
+                <label key={c} className="grid gap-1 text-center text-xs">
+                  <span className="text-muted-foreground">C{c}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-8 px-1 text-center"
+                    placeholder={String(curveOnly[c])}
+                    value={overrides[String(c)] ?? ""}
+                    onChange={(e) => setOverrides({ ...overrides, [String(c)]: e.target.value })}
+                    aria-label={`Custo em C${c}`}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Resultado: {table.map((v, i) => `C${i} ${v}`).join(" · ")}
+              {row.rarity === 5 && ` (5★: +${costRules.levelBonus.level95}% no nível 95 e +${costRules.levelBonus.level100}% no 100)`}
+            </p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="just">Justificativa</Label>
@@ -307,7 +344,7 @@ function PriceDialog({ row, bounds }: { row: PriceRow; bounds: { min: number; ma
           </div>
           <Button
             disabled={pending || justification.trim().length < 3}
-            onClick={() => run(() => setPriceAction({ characterId: row.id, cost, justification }), "Preço registrado no rascunho", () => setOpen(false))}
+            onClick={() => run(() => setPriceAction({ characterId: row.id, cost, overrides: parsedOverrides, justification }), "Preço registrado no rascunho", () => setOpen(false))}
           >
             {pending && <Loader2 className="animate-spin" />} Salvar no rascunho
           </Button>
@@ -317,7 +354,7 @@ function PriceDialog({ row, bounds }: { row: PriceRow; bounds: { min: number; ma
   );
 }
 
-export function CharacterPriceTable({ rows, bounds }: { rows: PriceRow[]; bounds: { min: number; max: number } }) {
+export function CharacterPriceTable({ rows, bounds, costRules }: { rows: PriceRow[]; bounds: { min: number; max: number }; costRules: CostRules }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const { pending, run } = useRun();
@@ -353,7 +390,7 @@ export function CharacterPriceTable({ rows, bounds }: { rows: PriceRow[]; bounds
         <THead>
           <TR>
             <TH>Personagem</TH>
-            <TH className="text-right">Vigente</TH>
+            <TH className="text-right">C0 vigente</TH>
             <TH className="text-right">Rascunho</TH>
             <TH className="text-right">Pick</TH>
             <TH className="text-right">Ban</TH>
@@ -378,6 +415,11 @@ export function CharacterPriceTable({ rows, bounds }: { rows: PriceRow[]; bounds
               <TD className="text-right text-gold tabular">
                 {r.activeCost ?? "—"}
                 {r.provisional && <span title="Provisório">*</span>}
+                {Object.keys(r.activeOverrides).length > 0 && (
+                  <span className="ml-1 text-[10px] text-primary" title={Object.entries(r.activeOverrides).map(([k, v]) => `C${k}=${v}`).join(", ")}>
+                    ajustes
+                  </span>
+                )}
               </TD>
               <TD className={cn("text-right tabular", r.draftCost !== null && r.draftCost !== r.activeCost && "font-semibold text-primary")}>
                 {r.draftCost !== null && r.draftCost !== r.activeCost ? r.draftCost : "—"}
@@ -410,7 +452,7 @@ export function CharacterPriceTable({ rows, bounds }: { rows: PriceRow[]; bounds
                 </Button>
               </TD>
               <TD>
-                <PriceDialog row={r} bounds={bounds} />
+                <PriceDialog row={r} bounds={bounds} costRules={costRules} />
               </TD>
             </TR>
           ))}

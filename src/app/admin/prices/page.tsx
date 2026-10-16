@@ -7,7 +7,8 @@ import type { Signal } from "@/domain/balance";
 import { formatDate } from "@/lib/utils";
 import { getLatestMetrics } from "@/server/balance/service";
 import { prisma } from "@/server/db";
-import { getSettings } from "@/server/settings";
+import { parseOverrides } from "@/domain/pricing";
+import { costRulesOf, getSettings } from "@/server/settings";
 import { AnalysisButtons } from "../analysis-buttons";
 import { CharacterPriceTable, DraftPanel, ProposalCard } from "./price-ui";
 
@@ -44,13 +45,13 @@ export default async function AdminPricesPage() {
   ]);
 
   const activeCost = new Map(active?.prices.map((p) => [p.characterId, p]) ?? []);
-  const draftCost = new Map(draft?.prices.map((p) => [p.characterId, p.cost]) ?? []);
+  const draftCost = new Map(draft?.prices.map((p) => [p.characterId, p]) ?? []);
 
   return (
     <div className="grid gap-6">
       <PageHeader
         title="Preços e propostas"
-        description={`Tabela vigente v${active?.number ?? "—"}. Preços entre ${settings.minCharacterCost} e ${settings.maxCharacterCost} pontos. Alterações vão para o rascunho e só valem após publicação.`}
+        description={`Tabela vigente v${active?.number ?? "—"}. Custo base (C0) entre ${settings.minCharacterCost} e ${settings.maxCharacterCost}; constelações seguem a curva das Configurações, com ajustes por personagem. Alterações vão para o rascunho e só valem após publicação.`}
         actions={<AnalysisButtons />}
       />
 
@@ -138,6 +139,7 @@ export default async function AdminPricesPage() {
         <CardContent>
           <CharacterPriceTable
             bounds={{ min: settings.minCharacterCost, max: settings.maxCharacterCost }}
+            costRules={costRulesOf(settings)}
             rows={characters.map((c) => {
               const m = latest.metrics.get(c.id);
               const ap = activeCost.get(c.id);
@@ -148,8 +150,10 @@ export default async function AdminPricesPage() {
                 rarity: c.rarity,
                 iconUrl: c.iconUrl,
                 activeCost: ap?.cost ?? null,
+                activeOverrides: parseOverrides(ap?.constellationOverrides),
                 provisional: ap?.isProvisional ?? false,
-                draftCost: draftCost.get(c.id) ?? null,
+                draftCost: draftCost.get(c.id)?.cost ?? null,
+                draftOverrides: draftCost.has(c.id) ? parseOverrides(draftCost.get(c.id)!.constellationOverrides) : null,
                 enabled: c.competitiveEnabled,
                 locked: c.balanceLocked,
                 lockReason: c.balanceLockReason,

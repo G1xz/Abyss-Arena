@@ -31,7 +31,34 @@ type Competitive = {
   tiePolicy: "DRAW" | "FIRST_SUBMITTED_WINS";
   minResultSeconds: number;
   maxResultSeconds: number;
+  curveFourStar: number[];
+  curveFiveStar: number[];
+  level95Bonus: number;
+  level100Bonus: number;
 };
+
+function CurveField({ label, values, onChange }: { label: string; values: number[]; onChange: (v: number[]) => void }) {
+  return (
+    <div className="grid gap-1.5 md:col-span-3">
+      <Label>{label}</Label>
+      <div className="grid grid-cols-7 gap-1.5">
+        {values.map((v, i) => (
+          <label key={i} className="grid gap-1 text-center text-xs">
+            <span className="text-muted-foreground">C{i}</span>
+            <Input
+              type="number"
+              className="h-8 px-1 text-center"
+              value={v}
+              disabled={i === 0}
+              onChange={(e) => onChange(values.map((x, j) => (j === i ? Number(e.target.value) : x)))}
+              aria-label={`${label} C${i}`}
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function CompetitiveSettingsForm({ initial }: { initial: Competitive }) {
   const [f, setF] = useState(initial);
@@ -47,8 +74,12 @@ export function CompetitiveSettingsForm({ initial }: { initial: Competitive }) {
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-3">
         <NumberField id="budget" label="Orçamento do deck" value={f.deckBudget} onChange={(v) => set("deckBudget", v)} />
-        <NumberField id="minc" label="Preço mínimo" value={f.minCharacterCost} onChange={(v) => set("minCharacterCost", v)} />
-        <NumberField id="maxc" label="Preço máximo" value={f.maxCharacterCost} onChange={(v) => set("maxCharacterCost", v)} />
+        <NumberField id="minc" label="Custo base mínimo (C0)" value={f.minCharacterCost} onChange={(v) => set("minCharacterCost", v)} />
+        <NumberField id="maxc" label="Custo base máximo (C0)" value={f.maxCharacterCost} onChange={(v) => set("maxCharacterCost", v)} />
+        <CurveField label="Curva de constelação 5★ (% sobre o C0)" values={f.curveFiveStar} onChange={(v) => set("curveFiveStar", v)} />
+        <CurveField label="Curva de constelação 4★ (% sobre o C0)" values={f.curveFourStar} onChange={(v) => set("curveFourStar", v)} />
+        <NumberField id="lv95" label="Bônus 5★ nível 95 (%)" value={f.level95Bonus} onChange={(v) => set("level95Bonus", v)} hint="4★: o nível não altera o custo" />
+        <NumberField id="lv100" label="Bônus 5★ nível 100 (%)" value={f.level100Bonus} onChange={(v) => set("level100Bonus", v)} />
         <NumberField id="bans" label="Bans por jogador" value={f.bansPerPlayer} onChange={(v) => set("bansPerPlayer", v)} />
         <NumberField id="picks" label="Picks por jogador" value={f.picksPerPlayer} onChange={(v) => set("picksPerPlayer", v)} />
         <div className="grid gap-1.5">

@@ -8,7 +8,7 @@ import { confirmOpponentResult, disputeOpponentResult, submitResult } from "../m
 import { cancelRoom, leaveRoom, performDraftAction, selectDeck, setReady, startDraft } from "../matches/service";
 import { canWatchMatch, getMatchView, type MatchView } from "../matches/view";
 import { idSchema, parseInput } from "../validation";
-import { registerMatchNotifier } from "./notify";
+import { markOffline, markOnline, registerMatchNotifier, registerUserNotifier } from "./notify";
 
 interface SocketData {
   user: SessionUser;
@@ -79,10 +79,16 @@ export function attachSocketServer(httpServer: HttpServer) {
     }
   };
   registerMatchNotifier(publish);
+  registerUserNotifier((userId, event, payload) => {
+    io.to(`user:${userId}`).emit(event as never, payload as never);
+  });
 
   io.on("connection", (rawSocket) => {
     const socket = rawSocket as unknown as AppSocket;
     const subscribed = new Set<string>();
+    // Canal pessoal (convites e avisos) e presença global.
+    void socket.join(`user:${socket.data.user.id}`);
+    markOnline(socket.data.user.id);
 
     /** Revalida a sessão a cada ação (logout ou mudança de papel valem imediatamente). */
     const currentUser = async () => {
@@ -141,6 +147,7 @@ export function attachSocketServer(httpServer: HttpServer) {
     on("match:dispute", (p, user) => disputeOpponentResult(user, p.matchId, { reason: p.reason }));
 
     socket.on("disconnect", () => {
+      markOffline(socket.data.user.id);
       for (const matchId of subscribed) {
         removePresence(matchId, socket.data.user.id);
         io.to(matchRoom(matchId)).emit("match:presence" as never, { matchId, online: presenceList(matchId) } as never);

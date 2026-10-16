@@ -40,14 +40,16 @@ export async function createUser(nickname?: string, role: Role = "USER"): Promis
   });
 }
 
+/** Custos base (C0) usados nos testes: 5★ = 100, 4★ = 40 (orçamento padrão de 1000). */
+export const TEST_COST = { five: 100, four: 40 };
+
 /**
- * Catálogo pequeno e determinístico + tabela v1 publicada + ciclo vigente.
- * Custos: 5★ = 18, 4★ = 10.
+ * Catálogo determinístico + tabela v1 publicada + ciclo vigente.
  */
 export async function seedWorld(options: { characters?: number } = {}) {
   const chars = snapshotCharacters()
     .filter((c) => !c.slug.startsWith("traveler-"))
-    .slice(0, options.characters ?? 24);
+    .slice(0, options.characters ?? 48);
   const created = [];
   for (const c of chars) {
     created.push(
@@ -69,7 +71,7 @@ export async function seedWorld(options: { characters?: number } = {}) {
   }
   const admin = await createUser("admin", "ADMIN");
   const version = await publishInitialPriceVersion(
-    created.map((c) => ({ characterId: c.id, cost: c.rarity === 5 ? 18 : 10 })),
+    created.map((c) => ({ characterId: c.id, cost: c.rarity === 5 ? TEST_COST.five : TEST_COST.four })),
     { adminId: admin.id },
   );
   const now = Date.now();
@@ -87,9 +89,23 @@ export async function seedWorld(options: { characters?: number } = {}) {
   return { admin, characters: created, fourStars, fiveStars, version: version!, cycle };
 }
 
-/** Deck válido: 6 personagens (2× 5★ + 4× 4★ = 76 pontos). */
+/** Declara personagens na conta do jogador (padrão: C0, nível 90). */
+export async function giveRoster(user: SessionUser, characterIds: string[], options: { constellation?: number; level?: number } = {}) {
+  for (const characterId of characterIds) {
+    await prisma.ownedCharacter.upsert({
+      where: { userId_characterId: { userId: user.id, characterId } },
+      create: { userId: user.id, characterId, constellation: options.constellation ?? 0, level: options.level ?? 90 },
+      update: { constellation: options.constellation ?? 0, level: options.level ?? 90 },
+    });
+  }
+}
+
+/** Deck válido com 10 personagens (4× 5★ + 6× 4★ = 640 pontos em C0), já na conta do jogador. */
 export async function createValidDeck(user: SessionUser, world: Awaited<ReturnType<typeof seedWorld>>, offset = 0) {
-  const ids = [...world.fiveStars.slice(offset, offset + 2), ...world.fourStars.slice(offset, offset + 4)].map((c) => c.id);
+  const ids = [...world.fiveStars.slice(offset, offset + 4), ...world.fourStars.slice(offset, offset + 6)].map((c) => c.id);
+  const missing = [];
+  for (const id of ids) if (!(await prisma.ownedCharacter.findUnique({ where: { userId_characterId: { userId: user.id, characterId: id } } }))) missing.push(id);
+  await giveRoster(user, missing);
   return createDeck(user, { name: `Deck ${user.nickname}`, characterIds: ids });
 }
 

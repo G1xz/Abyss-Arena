@@ -3,7 +3,8 @@ import { computeDraftState, type Seat } from "@/domain/draft";
 import type { AbyssRulesSnapshot } from "../abyss/service";
 import { prisma, type Tx } from "../db";
 import { AppError } from "../errors";
-import { getActivePriceVersion, getCompetitivePriceMap } from "../pricing/service";
+import { DEFAULT_COST_RULES } from "@/domain/pricing";
+import { getActivePriceVersion, getUserCostMap } from "../pricing/service";
 import { loadDraftContext } from "./service";
 import { readConfig } from "./common";
 import type { MatchConfig } from "../settings";
@@ -16,6 +17,8 @@ export interface DraftCharacterView {
   rarity: number;
   iconUrl: string | null;
   cost: number;
+  constellation: number;
+  level: number;
 }
 
 export interface MatchView {
@@ -85,6 +88,7 @@ export interface MatchView {
   winnerSeat: Seat | null;
   isDraw: boolean;
   resolvedBy: string | null;
+  invites: { id: string; toUserId: string; toNickname: string; status: string; expiresAt: string; createdAt: string }[];
   events: { id: string; type: string; actor: string | null; payload: Record<string, unknown> | null; createdAt: string }[];
 }
 
@@ -106,6 +110,7 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
       results: { include: { evidence: { orderBy: { createdAt: "asc" } } } },
       disputes: { orderBy: { createdAt: "asc" }, include: { raisedBy: { select: { nickname: true } } } },
       events: { orderBy: { createdAt: "desc" }, take: 60, include: { actorUser: { select: { nickname: true } } } },
+      invites: { orderBy: { createdAt: "desc" }, take: 5, include: { toUser: { select: { nickname: true } } } },
     },
   });
   if (!match) throw new AppError("NOT_FOUND", "Partida não encontrada");
@@ -114,19 +119,19 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
   const viewerIsAdmin = viewer?.role === "ADMIN";
   const config = readConfig(match);
 
-  // Avaliação dos decks selecionados (antes do snapshot), contra a tabela vigente.
-  let prices: Map<string, number> | null = null;
-  if (match.status === "WAITING" || match.status === "READY") {
-    const active = await getActivePriceVersion(db);
-    prices = active ? await getCompetitivePriceMap(active.id, db) : new Map();
-  }
+  // Avaliação dos decks selecionados (antes do snapshot): tabela vigente + conta de cada jogador.
+  const lobby = match.status === "WAITING" || match.status === "READY";
+  const active = lobby ? await getActivePriceVersion(db) : null;
 
   const players: MatchView["players"] = {};
   for (const p of match.players) {
     let deck: NonNullable<MatchView["players"]["A"]>["deck"] = null;
     if (p.deck) {
       const ids = p.deck.characters.map((c) => c.characterId);
-      const evaluation = prices ? evaluateDeck(ids, prices, { budget: config.deckBudget, minSize: config.minDeckSize }) : null;
+      const costs = lobby && active ? await getUserCostMap(p.userId, active.id, config.costRules ?? DEFAULT_COST_RULES, db) : null;
+      const evaluation = lobby
+        ? evaluateDeck(ids, costs?.prices ?? new Map(), { budget: config.deckBudget, minSize: config.minDeckSize }, costs?.owned)
+        : null;
       deck = {
         id: p.deck.id,
         name: p.deck.name,
@@ -158,6 +163,8 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
           rarity: e.rarity,
           iconUrl: e.iconUrl,
           cost: e.cost,
+          constellation: e.constellation,
+          level: e.level,
         }))
         .sort((a, b) => b.cost - a.cost || a.name.localeCompare(b.name));
     }
@@ -220,6 +227,14 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
     winnerSeat: match.winnerSeat,
     isDraw: match.isDraw,
     resolvedBy: match.resolvedBy,
+    invites: match.invites.map((i) => ({
+      id: i.id,
+      toUserId: i.toUserId,
+      toNickname: i.toUser.nickname,
+      status: i.status === "PENDING" && i.expiresAt.getTime() <= Date.now() ? "EXPIRED" : i.status,
+      expiresAt: i.expiresAt.toISOString(),
+      createdAt: i.createdAt.toISOString(),
+    })),
     events: match.events.map((e) => ({
       id: e.id,
       type: e.type,

@@ -7,9 +7,10 @@ import { getCurrentCycle, toRulesSnapshot } from "../abyss/service";
 import type { SessionUser } from "../auth/session";
 import { prisma, type Db, type Tx } from "../db";
 import { AppError } from "../errors";
-import { getActivePriceVersion, getCompetitivePriceMap, requireActivePriceVersion } from "../pricing/service";
+import { DEFAULT_COST_RULES } from "@/domain/pricing";
+import { getActivePriceVersion, getUserCostMap, requireActivePriceVersion } from "../pricing/service";
 import { enforceRateLimit } from "../rate-limit";
-import { notifyMatchChanged } from "../realtime/notify";
+import { notifyMatchChanged, notifyUser } from "../realtime/notify";
 import { getSettings, toMatchConfig, type MatchConfig } from "../settings";
 import { idSchema, parseInput } from "../validation";
 import {
@@ -39,18 +40,22 @@ export const roomCodeSchema = z
   .toUpperCase()
   .regex(/^[A-Z0-9]{4,10}$/, "Código de sala inválido");
 
-/** Valida um deck do usuário para uma partida, usando a tabela vigente e a configuração congelada. */
+/**
+ * Valida um deck do usuário para uma partida: tabela vigente, conta do jogador (constelação/nível)
+ * e configuração congelada na sala.
+ */
 async function evaluateSeatDeck(tx: Tx, userId: string, deckId: string, config: MatchConfig, priceVersionId?: string) {
   const deck = await tx.deck.findFirst({ where: { id: deckId, userId }, include: { characters: true } });
   if (!deck) throw new AppError("NOT_FOUND", "Deck não encontrado");
   const versionId = priceVersionId ?? (await requireActivePriceVersion(tx)).id;
-  const prices = await getCompetitivePriceMap(versionId, tx);
+  const costs = await getUserCostMap(userId, versionId, config.costRules ?? DEFAULT_COST_RULES, tx);
   const evaluation = evaluateDeck(
     deck.characters.map((c) => c.characterId),
-    prices,
+    costs.prices,
     { budget: config.deckBudget, minSize: config.minDeckSize },
+    costs.owned,
   );
-  return { deck, prices, evaluation };
+  return { deck, costs, evaluation };
 }
 
 async function assertSeatDeckValid(tx: Tx, userId: string, deckId: string, config: MatchConfig) {
@@ -112,13 +117,10 @@ export async function createRoom(user: SessionUser, input: unknown, db: Db = pri
   throw new AppError("INTERNAL", "Não foi possível gerar um código de sala. Tente novamente.");
 }
 
-export async function joinRoom(user: SessionUser, codeInput: unknown, db: Db = prisma) {
-  const code = parseInput(roomCodeSchema, codeInput);
-  const found = await db.match.findUnique({ where: { code }, select: { id: true } });
-  if (!found) throw new AppError("NOT_FOUND", "Sala não encontrada");
-
-  const match = await db.$transaction(async (tx) => {
-    const match = await loadLockedMatch(tx, found.id);
+/** Ocupa o assento B (dentro de uma transação). Usado ao aceitar convites. */
+export async function joinMatchTx(tx: Tx, user: SessionUser, matchId: string) {
+  {
+    const match = await loadLockedMatch(tx, matchId);
     if (match.players.some((p) => p.userId === user.id)) return match; // reentrada idempotente
     requireStatus(match, ["WAITING"], "Esta sala não está aceitando jogadores");
     if (match.players.length >= 2) throw new AppError("CONFLICT", "A sala já está cheia");
@@ -137,37 +139,58 @@ export async function joinRoom(user: SessionUser, codeInput: unknown, db: Db = p
     await bumpMatch(tx, match.id);
     await recordEvent(tx, match.id, "PLAYER_JOINED", user.id);
     return match;
-  });
+  }
+}
+
+/** Entrada direta pelo código (uso interno, testes e seed). Na interface, a entrada é por convite. */
+export async function joinRoom(user: SessionUser, codeInput: unknown, db: Db = prisma) {
+  const code = parseInput(roomCodeSchema, codeInput);
+  const found = await db.match.findUnique({ where: { code }, select: { id: true } });
+  if (!found) throw new AppError("NOT_FOUND", "Sala não encontrada");
+  const match = await db.$transaction((tx) => joinMatchTx(tx, user, found.id));
   notifyMatchChanged(match.id);
   return match;
 }
 
+/** Cancela convites pendentes de uma sala; devolve quem precisa ser avisado. */
+async function cancelPendingInvites(tx: Tx, matchId: string) {
+  const pending = await tx.matchInvite.findMany({ where: { matchId, status: "PENDING" }, select: { id: true, toUserId: true } });
+  if (pending.length) {
+    await tx.matchInvite.updateMany({ where: { id: { in: pending.map((p) => p.id) } }, data: { status: "CANCELLED", respondedAt: new Date() } });
+  }
+  return pending;
+}
+
 export async function leaveRoom(user: SessionUser, matchId: string, db: Db = prisma) {
-  await db.$transaction(async (tx) => {
+  const cancelled = await db.$transaction(async (tx) => {
     const match = await loadLockedMatch(tx, matchId);
     const seat = requireSeat(match, user.id);
     requireStatus(match, OPEN_STATUSES, "Não é possível sair depois que o draft começou");
     if (seat === "A") {
       await bumpMatch(tx, matchId, { status: "CANCELLED", cancelledAt: new Date(), cancelReason: "O anfitrião saiu da sala" });
       await recordEvent(tx, matchId, "ROOM_CANCELLED", user.id, { reason: "host_left" });
-      return;
+      return cancelPendingInvites(tx, matchId);
     }
     await tx.matchPlayer.delete({ where: { matchId_seat: { matchId, seat: "B" } } });
     await tx.matchPlayer.update({ where: { matchId_seat: { matchId, seat: "A" } }, data: { isReady: false } });
     await bumpMatch(tx, matchId, { status: "WAITING" });
     await recordEvent(tx, matchId, "PLAYER_LEFT", user.id);
+    return [];
   });
+  for (const invite of cancelled) notifyUser(invite.toUserId, "invite:updated", { id: invite.id, status: "CANCELLED" });
   notifyMatchChanged(matchId);
 }
 
 export async function cancelRoom(user: SessionUser, matchId: string, db: Db = prisma) {
-  await db.$transaction(async (tx) => {
+  const cancelled = await db.$transaction(async (tx) => {
     const match = await loadLockedMatch(tx, matchId);
     if (match.hostId !== user.id) throw new AppError("FORBIDDEN", "Apenas o anfitrião pode cancelar a sala");
     requireStatus(match, OPEN_STATUSES, "A sala só pode ser cancelada antes do início do draft");
     await bumpMatch(tx, matchId, { status: "CANCELLED", cancelledAt: new Date(), cancelReason: "Cancelada pelo anfitrião" });
     await recordEvent(tx, matchId, "ROOM_CANCELLED", user.id, { reason: "host_cancelled" });
+    return cancelPendingInvites(tx, matchId);
   });
+  for (const invite of cancelled) notifyUser(invite.toUserId, "invite:updated", { id: invite.id, status: "CANCELLED" });
   notifyMatchChanged(matchId);
 }
 
@@ -218,7 +241,7 @@ export async function startDraft(user: SessionUser, matchId: string, db: Db = pr
     if (!version) throw new AppError("UNAVAILABLE", "Nenhuma tabela de preços publicada");
 
     for (const player of match.players) {
-      const { deck, prices, evaluation } = await evaluateSeatDeck(tx, player.userId, player.deckId!, config, version.id);
+      const { deck, costs, evaluation } = await evaluateSeatDeck(tx, player.userId, player.deckId!, config, version.id);
       if (!evaluation.valid) {
         throw new AppError("DECK_INVALID", `O deck do jogador ${player.seat} ficou inválido: ${evaluation.issues[0]!.message}`);
       }
@@ -236,7 +259,9 @@ export async function startDraft(user: SessionUser, matchId: string, db: Db = pr
           entries: {
             create: characters.map((c) => ({
               characterId: c.id,
-              cost: prices.get(c.id)!,
+              cost: costs.prices.get(c.id)!,
+              constellation: costs.details.get(c.id)!.constellation,
+              level: costs.details.get(c.id)!.level,
               name: c.name,
               element: c.element,
               weaponType: c.weaponType,
@@ -260,10 +285,9 @@ export async function startDraft(user: SessionUser, matchId: string, db: Db = pr
 }
 
 export async function loadDraftContext(tx: Tx, matchId: string) {
-  const [snapshots, actions] = await Promise.all([
-    tx.matchDeckSnapshot.findMany({ where: { matchId }, include: { entries: true } }),
-    tx.draftAction.findMany({ where: { matchId }, orderBy: { stepIndex: "asc" } }),
-  ]);
+  // Sequencial: roda dentro da transação da ação de draft.
+  const snapshots = await tx.matchDeckSnapshot.findMany({ where: { matchId }, include: { entries: true } });
+  const actions = await tx.draftAction.findMany({ where: { matchId }, orderBy: { stepIndex: "asc" } });
   const decks: DraftDecks = { A: [], B: [] };
   for (const snapshot of snapshots) decks[snapshot.seat] = snapshot.entries.map((e) => e.characterId);
   const records: DraftActionRecord[] = actions.map((a) => ({

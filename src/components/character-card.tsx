@@ -11,6 +11,21 @@ export interface CharacterCardData {
   rarity: number;
   iconUrl: string | null;
   cost: number | null;
+  /** Constelação e nível declarados pelo jogador (quando aplicável). */
+  constellation?: number | null;
+  level?: number | null;
+}
+
+/** Selo de constelação (C0–C6) e nível. Nível 95/100 em 5★ é destacado (afeta o custo). */
+export function ConstellationBadge({ constellation, level, rarity, className }: { constellation?: number | null; level?: number | null; rarity?: number; className?: string }) {
+  if (constellation === null || constellation === undefined) return null;
+  const boosted = rarity === 5 && (level ?? 0) >= 95;
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white ring-1 ring-white/15", className)}>
+      <span className={constellation >= 6 ? "text-gold" : constellation > 0 ? "text-primary" : "text-muted-foreground"}>C{constellation}</span>
+      {level !== null && level !== undefined && <span className={boosted ? "text-gold" : "font-normal text-white/70"}>Nv.{level}</span>}
+    </span>
+  );
 }
 
 export function ElementDot({ element, className }: { element: string; className?: string }) {
@@ -108,6 +123,7 @@ export function CharacterCard({
           <span className="grid size-full place-items-center text-lg font-bold">{character.name.slice(0, 2)}</span>
         )}
         <CostPill cost={character.cost} provisional={provisional} className="absolute top-1.5 right-1.5" />
+        <ConstellationBadge constellation={character.constellation} level={character.level} rarity={character.rarity} className="absolute bottom-1.5 left-1.5" />
         {state === "banned" && (
           <span className="absolute inset-0 grid place-items-center bg-ban/25">
             <Ban className="size-1/2 text-ban drop-shadow" strokeWidth={2.5} />

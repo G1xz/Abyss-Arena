@@ -45,7 +45,7 @@ async function run<T>(fn: (user: SessionUser) => Promise<T>, paths: string[] = [
 
 // ── Preços ──────────────────────────────────────────────────────────────
 
-export async function setPriceAction(input: { characterId: string; cost: number; justification: string }) {
+export async function setPriceAction(input: { characterId: string; cost: number; overrides?: Record<string, number>; justification: string }) {
   return run(async (u) => {
     await setDraftPrice(u, input);
   });
@@ -127,6 +127,10 @@ export async function saveCompetitiveSettingsAction(input: {
   tiePolicy: "DRAW" | "FIRST_SUBMITTED_WINS";
   minResultSeconds: number;
   maxResultSeconds: number;
+  curveFourStar: number[];
+  curveFiveStar: number[];
+  level95Bonus: number;
+  level100Bonus: number;
 }) {
   return run(async (u) => {
     const sequence =
@@ -144,6 +148,8 @@ export async function saveCompetitiveSettingsAction(input: {
       deckBudget: input.deckBudget,
       minCharacterCost: input.minCharacterCost,
       maxCharacterCost: input.maxCharacterCost,
+      constellationCurve: { fourStar: input.curveFourStar, fiveStar: input.curveFiveStar },
+      levelBonus: { level95: input.level95Bonus, level100: input.level100Bonus },
       draftPreset: input.draftPreset,
       draft: { bansPerPlayer: input.bansPerPlayer, picksPerPlayer: input.picksPerPlayer, sequence, turnTimeoutSeconds: null },
       tiePolicy: input.tiePolicy,

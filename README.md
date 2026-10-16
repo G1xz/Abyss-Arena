@@ -1,6 +1,6 @@
 # Abyss Arena
 
-Plataforma competitiva de **draft de Genshin Impact**: decks com orçamento de pontos, salas privadas de X1 com bans e picks em tempo real, speedrun do Abismo Espiral com confirmação bilateral de tempos, ranking, estatísticas e um **balanceamento orgânico supervisionado** de preços.
+Plataforma competitiva de **draft de Genshin Impact**: importe os personagens da sua conta (com constelação e nível), monte decks com orçamento de 1000 pontos, desafie jogadores pelo nickname, faça bans e picks em tempo real, dispute speedruns do Abismo Espiral com confirmação bilateral de tempos e acompanhe ranking, estatísticas e o **balanceamento orgânico supervisionado** de preços.
 
 O combate acontece dentro do Genshin. A plataforma coordena o draft, registra os resultados e administra o ambiente competitivo. Ela não acessa contas, não automatiza partidas e não consulta tempos do jogo.
 
@@ -31,7 +31,7 @@ npm run dev                     # http://localhost:3000
 
 Com `SEED_DEMO_DATA=true` no `.env`, o seed também cria 6 jogadores `@demo.local`, decks e 48 partidas concluídas pelos fluxos reais, o que deixa estatísticas e propostas de balanceamento visíveis. A senha dos jogadores de demo vem de `DEMO_PASSWORD`; se estiver vazia, é gerada e exibida no console.
 
-Para jogar sozinho localmente, abra duas janelas (uma anônima) com contas diferentes.
+Para jogar sozinho localmente, abra duas janelas (uma anônima) com contas diferentes: importe os personagens em **Personagens** (colando o texto do HoYoLAB ou à mão), monte um deck e desafie a outra conta em **Jogar**. O convite aparece no sino da outra janela.
 
 ## Início rápido com Docker
 
@@ -62,7 +62,7 @@ A aplicação fica em `http://localhost:3000`. Para colocar em produção numa V
 ## Testes
 
 ```bash
-npm test                          # 90 testes: unitários + integração (PostgreSQL real, Socket.IO real)
+npm test                          # unitários + integração (PostgreSQL real, Socket.IO real)
 npx playwright install chromium   # primeira vez
 npm run build && npm run test:e2e # fluxo completo com 2 jogadores + admin em navegadores distintos
 ```
@@ -92,7 +92,8 @@ deploy/Caddyfile          proxy reverso com HTTPS automático
 
 ## Avisos
 
-- Os preços iniciais (5★ = 18, 4★ = 10, Viajante = 8 pontos) são **provisórios** e aparecem marcados assim. Não representam balanceamento competitivo validado.
+- Os custos base iniciais (5★ = 100, 4★ = 40, Viajante = 40 pontos, em C0) são **provisórios** e aparecem marcados assim. Não representam balanceamento competitivo validado. Bancos criados com a escala antiga recebem uma nova versão provisória ao rodar o seed, preservando o histórico.
+- Constelação e nível dos personagens são **declarados** pelo jogador (importados do HoYoLAB ou editados à mão), sem verificação.
 - O UID do Genshin informado no perfil é exibido como **não verificado**.
 - Links de evidência são apenas informativos e não são verificados automaticamente.
 - Dados de personagens: [Project Amber / yatta.moe](https://gi.yatta.moe), com [genshin.jmp.blue](https://genshin.jmp.blue) como alternativa. Projeto de fãs, sem afiliação com a HoYoverse.

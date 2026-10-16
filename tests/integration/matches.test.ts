@@ -36,7 +36,7 @@ describe("salas", () => {
 
     const view = await getMatchView(room.id, a);
     expect(view.status).toBe("BANNING");
-    expect(view.draft!.decks.A).toHaveLength(6);
+    expect(view.draft!.decks.A).toHaveLength(10);
     expect(view.viewerSeat).toBe("A");
     expect(view.events.map((e) => e.type)).toEqual(expect.arrayContaining(["ROOM_CREATED", "PLAYER_JOINED", "DRAFT_STARTED"]));
   });
@@ -111,10 +111,10 @@ describe("motor de draft no servidor", () => {
     const m = await startedMatch(world);
     const view = await completeDraft(m.matchId, m.a, m.b);
     expect(view.status).toBe("LOCKED");
-    expect(view.draft!.picks.A).toHaveLength(4);
-    expect(view.draft!.picks.B).toHaveLength(4);
+    expect(view.draft!.picks.A).toHaveLength(8);
+    expect(view.draft!.picks.B).toHaveLength(8);
     expect(view.draft!.bannedFrom.A).toHaveLength(2);
-    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(12);
+    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(20);
   });
 
   it("snapshots congelam decks e custos: mudanças posteriores não alteram a partida", async () => {
@@ -130,7 +130,7 @@ describe("motor de draft no servidor", () => {
 
     const view = await getMatchView(m.matchId, m.a);
     expect(view.draft!.decks.A.find((c) => c.characterId === target.characterId)!.cost).toBe(originalCost);
-    expect(view.draft!.decks.A).toHaveLength(6);
+    expect(view.draft!.decks.A).toHaveLength(10);
     expect(view.draft!.deckCosts.A).toBe(snapshot.totalCost);
     expect(view.priceVersion.number).toBe(1);
   });

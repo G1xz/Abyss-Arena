@@ -53,6 +53,9 @@ model User {
   versionsCreated PriceVersion[]       @relation("VersionCreator")
   versionsPublished PriceVersion[]     @relation("VersionPublisher")
   balanceRuns     BalanceRun[]
+  roster          OwnedCharacter[]
+  invitesSent     MatchInvite[]        @relation("InviteSender")
+  invitesReceived MatchInvite[]        @relation("InviteReceiver")
 }
 
 model Session {
@@ -132,6 +135,7 @@ model Character {
   draftActions    DraftAction[]
   metrics         BalanceMetric[]
   proposals       BalanceProposal[]
+  owners          OwnedCharacter[]
 
   @@unique([externalSource, externalId])
   @@index([competitiveEnabled])
@@ -181,7 +185,10 @@ model CharacterPrice {
   priceVersion   PriceVersion @relation(fields: [priceVersionId], references: [id], onDelete: Cascade)
   characterId    String
   character      Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  /// Custo base (C0). As demais constelações seguem a curva global, salvo ajuste.
   cost           Int
+  /// Ajustes por constelação (custo absoluto), ex.: {"2": 220}.
+  constellationOverrides Json?
   /// Preço inicial ainda não validado por dados competitivos.
   isProvisional  Boolean      @default(true)
 
@@ -203,6 +210,8 @@ model PriceChange {
   character      Character         @relation(fields: [characterId], references: [id], onDelete: Restrict)
   previousCost   Int?
   newCost        Int
+  previousOverrides Json?
+  newOverrides      Json?
   source         PriceChangeSource
   justification  String
   adminId        String?
@@ -348,6 +357,7 @@ model Match {
   events    MatchEvent[]
   results   MatchResult[]
   disputes  MatchDispute[]
+  invites   MatchInvite[]
 
   @@index([status])
   @@index([completedAt])
@@ -399,7 +409,10 @@ model MatchDeckSnapshotEntry {
   snapshot    MatchDeckSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
   characterId String
   character   Character         @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  /// Custo efetivo congelado (base + constelação + nível).
   cost        Int
+  constellation Int             @default(0)
+  level       Int               @default(90)
   name        String
   element     Element
   weaponType  WeaponType
@@ -659,4 +672,50 @@ model JobRun {
 
   @@unique([job, periodKey])
   @@index([job, startedAt])
+}
+
+// ───────────────────────────── Conta do jogador ─────────────────────────────
+
+/// Personagens que o jogador declara ter na conta (importados do HoYoLAB ou editados à mão).
+model OwnedCharacter {
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characterId   String
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  /// C0 a C6.
+  constellation Int       @default(0)
+  /// Nível do personagem (1 a 100).
+  level         Int       @default(90)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@id([userId, characterId])
+  @@index([characterId])
+}
+
+// ───────────────────────────── Convites ─────────────────────────────
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+model MatchInvite {
+  id          String       @id @default(cuid())
+  matchId     String
+  match       Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  fromUserId  String
+  fromUser    User         @relation("InviteSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String
+  toUser      User         @relation("InviteReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+  status      InviteStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  expiresAt   DateTime
+  respondedAt DateTime?
+
+  @@index([toUserId, status])
+  @@index([matchId])
 }

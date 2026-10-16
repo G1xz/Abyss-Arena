@@ -33,9 +33,9 @@ describe("métricas e propostas", () => {
     const metrics = await prisma.balanceMetric.findMany({ where: { runId: run.runId, scope: "OVERALL" } });
     const totalPicks = metrics.reduce((s, m) => s + m.picks, 0);
     const totalBans = metrics.reduce((s, m) => s + m.bans, 0);
-    expect(totalPicks).toBe(8);
+    expect(totalPicks).toBe(16);
     expect(totalBans).toBe(4);
-    expect(metrics.reduce((s, m) => s + m.wins, 0)).toBe(4);
+    expect(metrics.reduce((s, m) => s + m.wins, 0)).toBe(8);
 
     const stats = await getCharacterStats();
     expect(stats.totalMatches).toBe(1);
