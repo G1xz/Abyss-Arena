@@ -1,13 +1,9 @@
 import { Sparkles } from "lucide-react";
+import { notableResistances, RESISTANCE_LABEL, totalHp, type HpSource, type ResistanceKey, type ResolvedAbyssEnemy } from "@/domain/abyss-enemy";
+import { ELEMENT_META } from "@/domain/catalog";
 import { cn } from "@/lib/utils";
 
-export interface AbyssEnemyView {
-  name: string;
-  nameEn: string;
-  count: number | null;
-  wave: number;
-  image: string | null;
-}
+export type AbyssEnemyView = ResolvedAbyssEnemy;
 
 export interface AbyssChallengeView {
   floor: number;
@@ -17,10 +13,22 @@ export interface AbyssChallengeView {
   enemyLevel?: number | null;
   target?: string | null;
   leyLineDisorder?: string | null;
+  hpMultiplier?: number | null;
   enemies?: AbyssEnemyView[] | null;
 }
 
+export const formatHp = (hp: number) => hp.toLocaleString("pt-BR");
+
+const HP_SOURCE_LABEL: Record<HpSource, string> = {
+  abyss: "HP no Abismo (HP base × multiplicador da metade)",
+  manual: "HP no Abismo informado pela administração",
+  openWorld: "HP de mundo aberto no nível da câmara (sem o multiplicador do Abismo)",
+};
+
+const resistanceColor = (key: ResistanceKey) => (key === "PHYSICAL" ? "#c9c3d6" : ELEMENT_META[key].color);
+
 function Enemy({ enemy, size }: { enemy: AbyssEnemyView; size: number }) {
+  const resistances = notableResistances(enemy.resistances);
   return (
     <figure className="flex flex-col items-center gap-1 text-center" style={{ width: size + 52 }} title={enemy.name !== enemy.nameEn ? `${enemy.name} (${enemy.nameEn})` : enemy.name}>
       <span className="relative grid place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-[#2c2440] to-[#1b1830]" style={{ width: size, height: size }}>
@@ -35,6 +43,25 @@ function Enemy({ enemy, size }: { enemy: AbyssEnemyView; size: number }) {
         )}
       </span>
       <figcaption className="line-clamp-3 text-[11px] leading-tight">{enemy.name}</figcaption>
+      {enemy.hp != null && enemy.hpSource && (
+        <span
+          className={cn("text-[11px] font-semibold tabular-nums", enemy.hpSource === "openWorld" ? "text-muted-foreground" : "text-success")}
+          title={HP_SOURCE_LABEL[enemy.hpSource]}
+          data-testid="enemy-hp"
+        >
+          {formatHp(enemy.hp)}
+          {enemy.hpSource === "openWorld" && "*"}
+        </span>
+      )}
+      {resistances.length > 0 && (
+        <span className="flex flex-wrap justify-center gap-0.5" title="Resistências fora do padrão de 10%">
+          {resistances.map(([key, value]) => (
+            <span key={key} className="rounded px-1 text-[9px] leading-4 font-semibold" style={{ color: resistanceColor(key), backgroundColor: `${resistanceColor(key)}1f` }}>
+              {RESISTANCE_LABEL[key]} {value >= 1000 ? "imune" : `${value}%`}
+            </span>
+          ))}
+        </span>
+      )}
     </figure>
   );
 }
@@ -43,6 +70,8 @@ function HalfView({ challenge, compact }: { challenge: AbyssChallengeView; compa
   const enemies = challenge.enemies ?? [];
   const waves = [...new Set(enemies.map((e) => e.wave))].sort((a, b) => a - b);
   const off = challenge.enabled === false;
+  const total = totalHp(enemies);
+  const mechanics = [...new Map(enemies.filter((e) => e.mechanics?.length).map((e) => [e.nameEn, e])).values()];
   return (
     <div className={cn("grid content-start gap-2 rounded-xl border border-border/70 bg-background/40 p-3", off && "opacity-45")}>
       <div className="flex items-center gap-2">
@@ -71,6 +100,28 @@ function HalfView({ challenge, compact }: { challenge: AbyssChallengeView; compa
           ))}
         </div>
       )}
+      {total && (
+        <p className="text-xs" data-testid="half-total-hp">
+          <span className="text-muted-foreground">{total.openWorld ? "HP total (mundo aberto): " : "HP total: "}</span>
+          <span className={cn("font-semibold tabular-nums", total.openWorld ? "text-muted-foreground" : "text-success")}>
+            {formatHp(total.hp)}
+            {total.openWorld && "*"}
+          </span>
+          {!total.openWorld && challenge.hpMultiplier ? <span className="text-muted-foreground"> · ×{challenge.hpMultiplier.toLocaleString("pt-BR")}</span> : null}
+        </p>
+      )}
+      {mechanics.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Mecânicas</summary>
+          <div className="mt-1.5 grid gap-1.5">
+            {mechanics.map((e) => (
+              <p key={e.nameEn} className="whitespace-pre-line text-muted-foreground">
+                <span className="font-medium text-foreground">{e.name}:</span> {e.mechanics!.join("\n")}
+              </p>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -78,6 +129,7 @@ function HalfView({ challenge, compact }: { challenge: AbyssChallengeView; compa
 /** Câmaras do andar com as duas metades lado a lado (só as metades informadas). */
 export function AbyssFloorView({ challenges, compact }: { challenges: AbyssChallengeView[]; compact?: boolean }) {
   const chambers = [...new Set(challenges.map((c) => `${c.floor}-${c.chamber}`))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const openWorldHp = challenges.some((c) => c.enemies?.some((e) => e.hpSource === "openWorld"));
   return (
     <div className="grid gap-3">
       {chambers.map((key) => {
@@ -100,6 +152,12 @@ export function AbyssFloorView({ challenges, compact }: { challenges: AbyssChall
           </section>
         );
       })}
+      {openWorldHp && (
+        <p className="text-[11px] text-muted-foreground">
+          * HP de mundo aberto no nível da câmara. No Abismo esse valor é multiplicado por um fator que as fontes não publicam; ele aparece aqui quando a
+          administração informa o multiplicador da metade.
+        </p>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { matchMonster } from "@/server/abyss/sync";
 
 const wikitext = readFileSync(new URL("../fixtures/fandom-abyss-2026-10-16.wikitext", import.meta.url), "utf8");
 const monsters = Object.values(
-  (JSON.parse(readFileSync(new URL("../fixtures/yatta-monsters-sample.json", import.meta.url), "utf8")) as { data: { items: Record<string, { name: string; route: string; icon: string }> } }).data
+  (JSON.parse(readFileSync(new URL("../fixtures/yatta-monsters-sample.json", import.meta.url), "utf8")) as { data: { items: Record<string, { id: number; name: string; route: string; icon: string }> } }).data
     .items,
 );
 
@@ -20,7 +20,7 @@ describe("leitura da página do ciclo na wiki", () => {
     expect(cycle.floor12.map((c) => c.level)).toEqual([95, 98, 100]);
     const [c1] = cycle.floor12;
     expect(c1!.targetEn).toBe("Remaining challenge time longer than (180/300/420) sec.");
-    expect(c1!.halves[0]!.enemies).toEqual([{ nameEn: "Battle-Hardened Chimeric Volkodlak Archer", count: null, wave: 1 }]);
+    expect(c1!.halves[0]!.enemies).toEqual([{ nameEn: "Battle-Hardened Chimeric Volkodlak Archer", count: 1, wave: 1 }]);
     expect(c1!.halves[1]!.enemies.map((e) => [e.nameEn, e.wave])).toEqual([
       ["Iniquitous Baptist - Caller of Flood, Flame, and Fulmination", 1],
       ["Shadowy Husk: Standard Bearer", 2],
@@ -33,10 +33,11 @@ describe("leitura da página do ciclo na wiki", () => {
   });
 
   it("quantidades, '?' e comentários na lista de inimigos", () => {
-    expect(parseEnemyList("Rockfond Rifthound*2; Thundercraven Rifthound*?<!-- x -->// Large Hydro Slime*24")).toEqual([
+    expect(parseEnemyList("Rockfond Rifthound*2; Thundercraven Rifthound*?<!-- x -->// Large Hydro Slime*24; Radiant Moonfly")).toEqual([
       { nameEn: "Rockfond Rifthound", count: 2, wave: 1 },
       { nameEn: "Thundercraven Rifthound", count: null, wave: 1 },
       { nameEn: "Large Hydro Slime", count: 24, wave: 2 },
+      { nameEn: "Radiant Moonfly", count: 1, wave: 2 },
     ]);
   });
 

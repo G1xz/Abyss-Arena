@@ -6,12 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/misc";
 import { formatSequence } from "@/domain/draft";
 import { formatDate } from "@/lib/utils";
-import { getCurrentCycle, halfLabel } from "@/server/abyss/service";
+import { getCurrentCycle, halfLabel, toChallengeView } from "@/server/abyss/service";
 import { requireUser } from "@/server/auth/next";
 import { listUserDecks } from "@/server/decks/service";
 import { getPlayableContacts, listInvites } from "@/server/invites/service";
 import { getSettings } from "@/server/settings";
-import { AbyssFloorView, type AbyssEnemyView } from "@/components/abyss-view";
+import { AbyssFloorView } from "@/components/abyss-view";
 import { PlayPanel } from "./play-panel";
 
 export const metadata: Metadata = { title: "Jogar" };
@@ -91,17 +91,7 @@ export default async function PlayPage() {
           </CardHeader>
           <CardContent>
             {challenges.some((c) => Array.isArray(c.enemies) && c.enemies.length) ? (
-              <AbyssFloorView
-                challenges={challenges.map((c) => ({
-                  floor: c.floor,
-                  chamber: c.chamber,
-                  half: c.half,
-                  enemyLevel: c.enemyLevel,
-                  target: c.target,
-                  leyLineDisorder: c.leyLineDisorder,
-                  enemies: c.enemies as AbyssEnemyView[] | null,
-                }))}
-              />
+              <AbyssFloorView challenges={challenges.map(toChallengeView)} />
             ) : (
               <ul className="flex flex-wrap gap-1.5">
                 {challenges.map((c) => (

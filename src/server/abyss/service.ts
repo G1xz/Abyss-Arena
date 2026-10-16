@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ChamberHalf } from "@/generated/prisma/client";
+import { resolveEnemyHp, type AbyssEnemy, type HpOverrides, type ResolvedAbyssEnemy } from "@/domain/abyss-enemy";
+import { Prisma, type AbyssChallenge, type ChamberHalf } from "@/generated/prisma/client";
 import { writeAuditLog } from "../audit";
 import { assertAdmin } from "../auth/accounts";
 import type { SessionUser } from "../auth/session";
@@ -7,21 +8,40 @@ import { prisma, type Db, type Tx } from "../db";
 import { AppError } from "../errors";
 import { parseInput } from "../validation";
 
+export interface AbyssChallengeSnapshot {
+  floor: number;
+  chamber: number;
+  half: ChamberHalf;
+  enemyLevel?: number | null;
+  target?: string | null;
+  leyLineDisorder?: string | null;
+  hpMultiplier?: number | null;
+  /** Inimigos com o HP já resolvido (multiplicador do Abismo, valor manual ou HP de mundo aberto). */
+  enemies?: ResolvedAbyssEnemy[] | null;
+}
+
 export interface AbyssRulesSnapshot {
   cycleId: string;
   cycleName: string;
   rules: string;
   startsAt: string;
   endsAt: string;
-  challenges: {
-    floor: number;
-    chamber: number;
-    half: ChamberHalf;
-    enemyLevel?: number | null;
-    target?: string | null;
-    leyLineDisorder?: string | null;
-    enemies?: { name: string; nameEn: string; count: number | null; wave: number; image: string | null }[] | null;
-  }[];
+  challenges: AbyssChallengeSnapshot[];
+}
+
+/** Metade do Abismo pronta para exibição, com o HP de cada inimigo resolvido. */
+export function toChallengeView(c: AbyssChallenge): AbyssChallengeSnapshot & { enabled: boolean } {
+  return {
+    floor: c.floor,
+    chamber: c.chamber,
+    half: c.half,
+    enabled: c.enabled,
+    enemyLevel: c.enemyLevel,
+    target: c.target,
+    leyLineDisorder: c.leyLineDisorder,
+    hpMultiplier: c.hpMultiplier,
+    enemies: Array.isArray(c.enemies) ? resolveEnemyHp(c.enemies as unknown as AbyssEnemy[], c.hpMultiplier, c.hpOverrides as HpOverrides | null) : null,
+  };
 }
 
 /** Ciclo vigente: ativo e dentro do intervalo de datas. */
@@ -42,15 +62,10 @@ export function toRulesSnapshot(cycle: NonNullable<Awaited<ReturnType<typeof get
     endsAt: cycle.endsAt.toISOString(),
     challenges: cycle.challenges
       .filter((c) => c.enabled)
-      .map((c) => ({
-        floor: c.floor,
-        chamber: c.chamber,
-        half: c.half,
-        enemyLevel: c.enemyLevel,
-        target: c.target,
-        leyLineDisorder: c.leyLineDisorder,
-        enemies: (c.enemies as AbyssRulesSnapshot["challenges"][number]["enemies"]) ?? null,
-      })),
+      .map((c) => {
+        const { enabled: _enabled, ...view } = toChallengeView(c);
+        return view;
+      }),
   };
 }
 
@@ -159,6 +174,35 @@ export async function setChallengeEnabled(admin: SessionUser, challengeId: strin
       entityType: "AbyssCycle",
       entityId: challenge.cycleId,
       after: { challengeId, enabled },
+    });
+    return challenge;
+  });
+}
+
+export const challengeHpSchema = z.object({
+  hpMultiplier: z.coerce.number().positive("O multiplicador deve ser maior que zero").max(100, "Multiplicador alto demais").nullable(),
+  hpOverrides: z.record(z.string().min(3).max(200), z.coerce.number().int("Informe o HP sem casas decimais").positive().max(1_000_000_000)).default({}),
+});
+
+/**
+ * HP do Abismo de uma metade: multiplicador sobre o HP base e/ou HP exato por inimigo.
+ * Fica fora da sincronização (a wiki e a yatta não trazem) e não muda partidas já criadas.
+ */
+export async function setChallengeHp(admin: SessionUser, challengeId: string, input: unknown, db: Db = prisma) {
+  assertAdmin(admin);
+  const data = parseInput(challengeHpSchema, input);
+  return db.$transaction(async (tx) => {
+    const before = await tx.abyssChallenge.findUnique({ where: { id: challengeId }, select: { cycleId: true, hpMultiplier: true, hpOverrides: true } });
+    if (!before) throw new AppError("NOT_FOUND", "Sala não encontrada");
+    const hpOverrides = Object.keys(data.hpOverrides).length ? (data.hpOverrides as Prisma.InputJsonValue) : Prisma.DbNull;
+    const challenge = await tx.abyssChallenge.update({ where: { id: challengeId }, data: { hpMultiplier: data.hpMultiplier, hpOverrides } });
+    await writeAuditLog(tx, {
+      adminId: admin.id,
+      action: "ABYSS_CHALLENGE_HP_UPDATED",
+      entityType: "AbyssCycle",
+      entityId: before.cycleId,
+      before: { challengeId, hpMultiplier: before.hpMultiplier, hpOverrides: before.hpOverrides },
+      after: { challengeId, ...data },
     });
     return challenge;
   });

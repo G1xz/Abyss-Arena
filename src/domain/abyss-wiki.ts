@@ -13,7 +13,7 @@ import type { ElementKey } from "./catalog";
 
 export interface WikiEnemy {
   nameEn: string;
-  /** Quantidade (null quando a wiki não informa ou usa "?"). */
+  /** Quantidade: 1 quando a wiki não indica, null quando usa "?". */
   count: number | null;
   wave: number;
 }
@@ -64,7 +64,8 @@ export function parseEnemyList(value: string | null): WikiEnemy[] {
         const m = /^(.*?)\s*(?:\*\s*(\d+|\?)\s*\??)?\s*$/.exec(raw.trim());
         const nameEn = (m?.[1] ?? raw).replace(/\*/g, "").trim();
         if (!nameEn) continue;
-        const count = m?.[2] && m[2] !== "?" ? Number(m[2]) : null;
+        // Sem "*N" a wiki indica um único inimigo; "*?" é quantidade desconhecida.
+        const count = !m?.[2] ? 1 : m[2] === "?" ? null : Number(m[2]);
         enemies.push({ nameEn, count, wave: waveIndex + 1 });
       }
     });

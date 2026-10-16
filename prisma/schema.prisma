@@ -310,8 +310,12 @@ model AbyssChallenge {
   /// Perturbação da linha ley desta metade (traduzida) e original em inglês.
   leyLineDisorder   String?
   leyLineDisorderEn String?
-  /// Inimigos por onda: [{ name, nameEn, count, image }].
+  /// Inimigos por onda: [{ name, nameEn, count, wave, image, baseHp, resistances, mechanics }].
   enemies Json?
+  /// Multiplicador de HP do Abismo nesta metade, informado pelo admin (nenhuma fonte pública traz).
+  hpMultiplier Float?
+  /// HP no Abismo informado à mão por inimigo: { "<onda>:<nome em inglês>": hp }.
+  hpOverrides  Json?
 
   @@unique([cycleId, floor, chamber, half])
 }

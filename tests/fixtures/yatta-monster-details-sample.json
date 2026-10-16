@@ -1,0 +1,1151 @@
+{
+ "22070101": {
+  "id": 22070101,
+  "name": "Armadura do Vazio: Porta-estandarte",
+  "route": "Shadowy Husk: Standard Bearer",
+  "entries": {
+   "22070101": {
+    "id": 22070101,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 67.92,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 50.24,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      50004073,
+      0
+     ],
+     "fireSubHurt": 0.3,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.3
+    }
+   },
+   "22070102": {
+    "id": 22070102,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 67.92,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 50.24,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      50004073,
+      0
+     ],
+     "fireSubHurt": 0.3,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.3
+    }
+   }
+  },
+  "tips": {
+   "300801": {
+    "description": "Um porta-bandeiras enigmático escuro. Quando seus ataques <color=#FFE14BFF>atingirem personagens protegidos por um escudo</color>, gerarão um escudo para si mesmos, para os Cavaleiros da Serpente Negra e para as Armaduras do Vazio próximas ao custo de sua Vida."
+   }
+  }
+ },
+ "22070301": {
+  "id": 22070301,
+  "name": "Armadura do Vazio: Defensor",
+  "route": "Shadowy Husk: Defender",
+  "entries": {
+   "22070301": {
+    "id": 22070301,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 54.336,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 62.8,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      50004075,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.3,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.3
+    }
+   },
+   "22070302": {
+    "id": 22070302,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 54.336,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 62.8,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      50004075,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.3,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.3
+    }
+   }
+  },
+  "tips": {
+   "301001": {
+    "description": "Um arqueiro enigmático escuro. Quando seus ataques atingirem <color=#FFE14BFF>personagens protegidos por um escudo</color>, transformará sua arma em um escudo que resiste a Dano. Ele ganhará um aumento de Ataque ao custo de sua Vida. O aumento do Dano do Ataque da Armadura do Vazio: Defensor pode ser acumulado várias vezes."
+   }
+  }
+ },
+ "22100501": {
+  "id": 22100501,
+  "name": "Batizador Iníquo",
+  "route": "Iniquitous Baptist",
+  "entries": {
+   "22100101": {
+    "id": 22100101,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100102": {
+    "id": 22100102,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100201": {
+    "id": 22100201,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100202": {
+    "id": 22100202,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 50.24,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100301": {
+    "id": 22100301,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100302": {
+    "id": 22100302,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 164.83508,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 75.36,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100303": {
+    "id": 22100303,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 164.83508,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 75.36,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100304": {
+    "id": 22100304,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 164.83508,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 75.36,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100401": {
+    "id": 22100401,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "22100501": {
+    "id": 22100501,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 135.84,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "304001": {
+    "description": "Um monstro da Ordem do Abismo, pode utilizar vários elementos durante o combate e utiliza o Revestimento Elemental correspondente para resistir a danos. Durante a batalha, são criados anéis de elementos que entoam ataques poderosos. Talvez, destruir todos os anéis elementais por meio de Reação Elemental possa evitar o desastre iminente."
+   }
+  }
+ },
+ "24090501": {
+  "id": 24090501,
+  "name": "Autômato da Fonte Secreta: Dispositivo Supervisor",
+  "route": "Secret Source Automaton: Overseer Device",
+  "entries": {
+   "24090501": {
+    "id": 24090501,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 293.4144,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "24090502": {
+    "id": 24090502,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 335.6541,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "24090503": {
+    "id": 24090503,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 335.6541,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "24090504": {
+    "id": 24090504,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 335.6541,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "309101": {
+    "description": "Uma civilização cuja magnificência marcou eras distantes, construiu esse Dispositivo Supervisor para controlar múltiplas máquinas da Fonte Secreta. Após entrar no Modo de Varredura, começará a atacar enquanto gera Energia Fluida. Quanto maior a Energia Fluida, maior o Dano causado. Durante esse período, você pode conseguir obstruir o acúmulo de Energia Fluida ao <color=#FFE14BFF>usar ataques Cryo consecutivos</color>...\\nDizem que caso personagens entrem e mantenham o estado da Bênção do Espírito da Noite em uma luta contra ele, o Autômato da Fonte Secreta: Dispositivo Supervisor entrará num \"Estado de Contra-Ataque\" e mudará seus modos de ataque..."
+   }
+  }
+ },
+ "26180101": {
+  "id": 26180101,
+  "name": "Cavalo-marinho Perolado Milenar",
+  "route": "Millennial Pearl Seahorse",
+  "entries": {
+   "26180101": {
+    "id": 26180101,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 149.424,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.6,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "306601": {
+    "description": "Um senhor solitário dos cavalos-marinhos que tem a forma de uma besta fantástica que superou quase todas as outras Aberrações Primordiais. A <color=#FFE14BFF>Peróla do Mar Primordial</color> debaixo de sua cabeça é uma cristalização <color=#FFE14BFF>Electro</color> que permite que ele use Ataques Elementais mais poderosos, e que possui habilidades defensivas mais poderosas. Além de usar outras <color=#FFE14BFF>Reações Elementais</color> para destruir a Pérola do Mar Primordial, você também pode destruir o Orbe do Coral Ressonante que cria enquanto guia o Trovão do Mar Primordial para causar Dano contra a Pérola."
+   },
+   "306602": {
+    "description": "Um senhor solitário dos cavalos-marinhos que tem a forma de uma besta fantástica que superou quase todas as outras Aberrações Primordiais. A <color=#FFE14BFF>Peróla do Mar Primordial</color> debaixo de sua cabeça é uma cristalização <color=#FFE14BFF>Electro</color> que permite que ele use Ataques Elementais mais poderosos, e que possui habilidades defensivas mais poderosas. Além de usar outras <color=#FFE14BFF>Reações Elementais</color> para destruir a Pérola do Mar Primordial, você também pode destruir o Orbe do Coral Ressonante que cria enquanto guia o Trovão do Mar Primordial para causar Dano contra a Pérola."
+   }
+  }
+ },
+ "26300101": {
+  "id": 26300101,
+  "name": "Antílope Radiante",
+  "route": "Radiant Antelope",
+  "entries": {
+   "26300101": {
+    "id": 26300101,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 149.424,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 75.36,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26300102": {
+    "id": 26300102,
+    "type": "MONSTER_ORDINARY",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 149.424,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 75.36,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "309601": {
+    "description": "Um monstro que passou por uma evolução única por estar mergulhado no poder da lua antiga por tanto tempo. Bestas Radiantes podem usar seus poderes para capturar os inimigos dentro de Casulos Brilhantes... Quando capturado, tanto o Dano sofrido e a força da Cura recebida serão afetados.\\nEntretanto, se você puder escapar de um Casulo Brilhante ao ser <color=#FFE14BFF>curado para a sua Vida Máxima</color>, receberá o efeito Desemaranhado, que fortalece suas habilidades por um curto período. Aproveite essa oportunidade para atacar..."
+   }
+  }
+ },
+ "26301101": {
+  "id": 26301101,
+  "name": "Borboleta Fantasmagórica do Véu Lunar",
+  "route": "Radiant Moonfly",
+  "entries": {
+   "26301101": {
+    "id": 26301101,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 217.344,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.7,
+     "grassSubHurt": 0.7,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26301102": {
+    "id": 26301102,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 217.344,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 100.48,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.7,
+     "grassSubHurt": 0.7,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.1,
+     "windSubHurt": 0.1,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "309801": {
+    "description": "A espécie mais forte de feras radiantes, cujos \"Casulos Brilhantes\" exibem efeitos mais óbvios. <color=#FFE14BFF>Cure rapidamente sua Vida até o máximo</color> para escapar dos Casulos Brilhantes. As feras radiantes possuem muitas características misteriosas — há até rumores de que podem mudar seu Tipo Elemental sob as condições certas..."
+   }
+  }
+ },
+ "26310501": {
+  "id": 26310501,
+  "name": "Leão Alado Quimérico",
+  "route": "Chimeric Winged Lion",
+  "entries": {
+   "26310501": {
+    "id": 26310501,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 296.1312,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 95.456,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310502": {
+    "id": 26310502,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 329.1761,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 135.17488,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310503": {
+    "id": 26310503,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 296.1312,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 95.456,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310504": {
+    "id": 26310504,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 100.58158,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 135.17488,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310505": {
+    "id": 26310505,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 350.27457,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 95.456,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310506": {
+    "id": 26310506,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 350.27457,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 95.456,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   },
+   "26310507": {
+    "id": 26310507,
+    "type": "MONSTER_BOSS",
+    "prop": [
+     {
+      "propType": "FIGHT_PROP_BASE_HP",
+      "initValue": 350.27457,
+      "type": "GROW_CURVE_HP_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_ATTACK",
+      "initValue": 95.456,
+      "type": "GROW_CURVE_ATTACK_2"
+     },
+     {
+      "propType": "FIGHT_PROP_BASE_DEFENSE",
+      "initValue": 500,
+      "type": "GROW_CURVE_DEFENSE"
+     }
+    ],
+    "resistance": {
+     "critical": [
+      0,
+      0
+     ],
+     "fireSubHurt": 0.1,
+     "grassSubHurt": 0.1,
+     "waterSubHurt": 0.1,
+     "elecSubHurt": 0.5,
+     "windSubHurt": 0.5,
+     "iceSubHurt": 0.1,
+     "rockSubHurt": 0.1,
+     "physicalSubHurt": 0.1
+    }
+   }
+  },
+  "tips": {
+   "311101": {
+    "description": "O Leão Alado Quimérico oscilará entre dois estados: Trovejante e Ventania.\\nQuando está em Trovejante, ficará enfraquecido quando seu Revestimento Electro for quebrado. Além disso, qualquer tentativa de espalhar suas lâminas de raio pode ser interrompida por Brilho Estelar.\\nQuando está em Ventania, tentará absorver quaisquer Orbes Anemo no campo para carregar o ataque. Nesse momento, destruir os Orbes ou usar Brilho Estelar pode interromper o carregamento e o enfraquecer."
+   }
+  }
+ }
+}

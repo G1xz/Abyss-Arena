@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { addChallenge, createCycle, setChallengeEnabled, updateCycle } from "@/server/abyss/service";
+import { addChallenge, createCycle, setChallengeEnabled, setChallengeHp, updateCycle } from "@/server/abyss/service";
 import { approveProposal, rejectProposal, runBalanceAnalysis } from "@/server/balance/service";
 import { resolveDispute } from "@/server/matches/results";
 import {
@@ -40,6 +40,7 @@ describe("permissões administrativas", () => {
       ["updateCycle", () => updateCycle(user, world.cycle.id, {})],
       ["setChallengeEnabled", () => setChallengeEnabled(user, "x", false)],
       ["addChallenge", () => addChallenge(user, world.cycle.id, { floor: 12, chamber: 1, half: "SECOND" })],
+      ["setChallengeHp", () => setChallengeHp(user, "x", { hpMultiplier: 4.75, hpOverrides: {} })],
     ];
     for (const [name, call] of calls) {
       await expect(call(), name).rejects.toMatchObject({ code: "FORBIDDEN" });

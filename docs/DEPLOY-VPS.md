@@ -98,4 +98,4 @@ docker compose exec -T db pg_restore -U abyss -d abyss_arena --clean --if-exists
 
 ## 6. Novo ciclo do Abismo
 
-O ciclo muda todo mês e é sincronizado sozinho da wiki do Fandom, entrando em vigor na virada. Confira em **Admin → Ciclos do Abismo** quais metades valem. Se a wiki atrasar ou mudar de formato, cadastre o ciclo à mão (ele é vinculado à wiki quando a página aparecer). Para jogadores de outro servidor, ajuste `ABYSS_SERVER_UTC_OFFSET`. Depois da mudança, use **Revisão extraordinária** no painel de preços, se fizer sentido.
+O ciclo muda todo mês e é sincronizado sozinho da wiki do Fandom, entrando em vigor na virada. Confira em **Admin → Ciclos do Abismo** quais metades valem e, em "HP no Abismo", informe o multiplicador de HP de cada metade (ou o HP exato dos inimigos sem dados na fonte). Se a wiki atrasar ou mudar de formato, cadastre o ciclo à mão (ele é vinculado à wiki quando a página aparecer). Para jogadores de outro servidor, ajuste `ABYSS_SERVER_UTC_OFFSET`. Depois da mudança, use **Revisão extraordinária** no painel de preços, se fizer sentido.

@@ -1,11 +1,23 @@
 /**
  * Sincronização automática dos ciclos do Abismo (andar 12) a partir da wiki do Fandom.
  * - Estrutura do ciclo: página "Spiral_Abyss/Floors/<data>" (MediaWiki API).
- * - Nomes em português e ícones: catálogo de inimigos da yatta.moe.
+ * - Nomes em português, ícones, HP base, resistências e mecânicas: inimigos da yatta.moe.
  * - Inimigos que a yatta não tem: imagem da página do inimigo na wiki, baixada e guardada no banco
  *   (a CDN da wiki não permite exibição direta em outros sites).
  * O ciclo novo entra em vigor sozinho na virada do Abismo (startsAt). Falhas não alteram nada.
+ * O multiplicador de HP e os HPs informados pelo admin nunca são sobrescritos.
  */
+import {
+  isBattleHardened,
+  mainEntry,
+  monsterBaseHp,
+  monsterMechanics,
+  monsterResistances,
+  type AbyssEnemy,
+  type HpCurve,
+  type YattaMonsterDetail,
+  type YattaMonsterEntry,
+} from "@/domain/abyss-enemy";
 import {
   abyssResetAt,
   cycleKeysAround,
@@ -23,6 +35,7 @@ const UA = "AbyssArena/0.1 (+abyss-sync)";
 const WIKI_API = "https://genshin-impact.fandom.com/api.php";
 
 export interface Monster {
+  id: number;
   name: string;
   route: string;
   icon: string;
@@ -31,6 +44,10 @@ export interface Monster {
 export interface AbyssSources {
   fetchCycleWikitext(key: string): Promise<string | null>;
   fetchMonsters(): Promise<Monster[]>;
+  /** Atributos do inimigo (HP inicial, resistências, dicas de combate). */
+  fetchMonsterDetail(id: number): Promise<YattaMonsterDetail | null>;
+  /** Curvas de crescimento de atributos por nível. */
+  fetchHpCurve(): Promise<HpCurve>;
   /** Imagem principal da página de cada inimigo (seguindo redirecionamentos). */
   fetchWikiImages(namesEn: string[]): Promise<Map<string, string | null>>;
   downloadImage(url: string): Promise<{ contentType: string; data: Uint8Array } | null>;
@@ -55,6 +72,14 @@ export function defaultAbyssSources(): AbyssSources {
     async fetchMonsters() {
       const data = (await getJson("https://gi.yatta.moe/api/v2/pt/monster")) as { data: { items: Record<string, Monster> } };
       return Object.values(data.data.items).filter((m) => m.route && m.icon);
+    },
+    async fetchMonsterDetail(id) {
+      const data = (await getJson(`https://gi.yatta.moe/api/v2/pt/monster/${id}`)) as { data?: YattaMonsterDetail };
+      return data.data ?? null;
+    },
+    async fetchHpCurve() {
+      const data = (await getJson("https://gi.yatta.moe/api/v2/static/monsterCurve")) as { data: HpCurve };
+      return data.data;
     },
     async fetchWikiImages(namesEn) {
       const result = new Map<string, string | null>();
@@ -108,24 +133,37 @@ export function matchMonster(nameEn: string, monsters: Monster[]): Monster | nul
   return best;
 }
 
-export interface EnemyView {
+interface ResolvedMonster {
   name: string;
-  nameEn: string;
-  count: number | null;
-  wave: number;
   image: string | null;
+  /** Versão principal na yatta; ausente quando não há correspondência ou é uma variante "Battle-Hardened". */
+  stats?: { entry: YattaMonsterEntry; mechanics: string[] };
 }
 
-async function resolveEnemies(cycle: WikiCycle, sources: AbyssSources, db: Db): Promise<Map<string, { name: string; image: string | null }>> {
+async function resolveEnemies(cycle: WikiCycle, sources: AbyssSources, db: Db): Promise<{ resolved: Map<string, ResolvedMonster>; curve: HpCurve }> {
   const names = [...new Set(cycle.floor12.flatMap((c) => c.halves.flatMap((h) => h.enemies.map((e) => e.nameEn))))];
   const monsters = await sources.fetchMonsters().catch(() => [] as Monster[]);
-  const resolved = new Map<string, { name: string; image: string | null }>();
+  const resolved = new Map<string, ResolvedMonster>();
   const missing: string[] = [];
+  const stats = new Map<number, ResolvedMonster["stats"]>();
   for (const nameEn of names) {
     const m = matchMonster(nameEn, monsters);
-    if (m) resolved.set(nameEn, { name: m.name, image: `https://gi.yatta.moe/assets/UI/monster/${m.icon}.png` });
-    else missing.push(nameEn);
+    if (!m) {
+      missing.push(nameEn);
+      continue;
+    }
+    const entry: ResolvedMonster = { name: m.name, image: `https://gi.yatta.moe/assets/UI/monster/${m.icon}.png` };
+    if (!isBattleHardened(nameEn)) {
+      if (!stats.has(m.id)) {
+        const detail = await sources.fetchMonsterDetail(m.id).catch(() => null);
+        const main = detail && mainEntry(detail);
+        stats.set(m.id, main ? { entry: main, mechanics: monsterMechanics(detail) } : undefined);
+      }
+      entry.stats = stats.get(m.id);
+    }
+    resolved.set(nameEn, entry);
   }
+  const curve = [...stats.values()].some(Boolean) ? await sources.fetchHpCurve().catch(() => ({}) as HpCurve) : {};
   if (missing.length) {
     const wikiImages = await sources.fetchWikiImages(missing).catch(() => new Map<string, string | null>());
     for (const nameEn of missing) {
@@ -145,7 +183,7 @@ async function resolveEnemies(cycle: WikiCycle, sources: AbyssSources, db: Db): 
       resolved.set(nameEn, { name: nameEn, image });
     }
   }
-  return resolved;
+  return { resolved, curve };
 }
 
 export interface SyncCycleResult {
@@ -175,7 +213,7 @@ export async function syncAbyssCycle(
   const startsAt = abyssResetAt(parsed.start, offset);
   const nextKey = parsed.next ?? `${new Date(Date.UTC(Number(parsed.start.slice(0, 4)), Number(parsed.start.slice(5, 7)), 16)).toISOString().slice(0, 10)}`;
   const endsAt = abyssResetAt(nextKey, offset);
-  const enemies = await resolveEnemies(parsed, sources, db);
+  const { resolved, curve } = await resolveEnemies(parsed, sources, db);
 
   const challenges = parsed.floor12.flatMap((c) =>
     c.halves.map((h) => {
@@ -187,7 +225,17 @@ export async function syncAbyssCycle(
         target: translateTarget(c.targetEn),
         leyLineDisorder: translated.map((t) => t.pt).join(" · ") || null,
         leyLineDisorderEn: h.disorderEn.join(" · ") || null,
-        enemies: h.enemies.map<EnemyView>((e) => ({ ...e, name: enemies.get(e.nameEn)?.name ?? e.nameEn, image: enemies.get(e.nameEn)?.image ?? null })),
+        enemies: h.enemies.map<AbyssEnemy>((e) => {
+          const m = resolved.get(e.nameEn);
+          return {
+            ...e,
+            name: m?.name ?? e.nameEn,
+            image: m?.image ?? null,
+            baseHp: m?.stats ? monsterBaseHp(m.stats.entry, c.level, curve) : null,
+            resistances: m?.stats ? monsterResistances(m.stats.entry) : null,
+            mechanics: m?.stats?.mechanics ?? [],
+          };
+        }),
       };
     }),
   );
@@ -219,7 +267,7 @@ export async function syncAbyssCycle(
       };
       await tx.abyssChallenge.upsert({
         where: { cycleId_floor_chamber_half: { cycleId: cycle.id, floor: 12, chamber: c.chamber, half: c.half } },
-        // Novas metades entram válidas; em atualizações, a escolha do admin (enabled) é preservada.
+        // Novas metades entram válidas; em atualizações, o que o admin definiu (enabled, multiplicador e HPs) é preservado.
         create: { cycleId: cycle.id, floor: 12, chamber: c.chamber, half: c.half, enabled: true, ...fields },
         update: fields,
       });

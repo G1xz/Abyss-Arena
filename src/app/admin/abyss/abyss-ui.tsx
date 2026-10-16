@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Badge, Label, NativeSelect, Textarea } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/overlays";
 import { cn, formatDate } from "@/lib/utils";
-import { AbyssFloorView, type AbyssChallengeView } from "@/components/abyss-view";
-import { addChallengeAction, createCycleAction, syncAbyssAction, toggleChallengeAction, updateCycleAction } from "../actions";
+import { AbyssFloorView, formatHp, type AbyssChallengeView } from "@/components/abyss-view";
+import { enemyKey, type HpOverrides } from "@/domain/abyss-enemy";
+import { addChallengeAction, createCycleAction, setChallengeHpAction, syncAbyssAction, toggleChallengeAction, updateCycleAction } from "../actions";
 import { ActionButton } from "../admin-ui";
 
 const SYNC_STATUS: Record<string, string> = { created: "criado", updated: "atualizado", adopted: "vinculado ao ciclo existente", missing: "ainda não publicado na wiki" };
@@ -96,6 +97,8 @@ export function NewCycleForm({ defaultRules }: { defaultRules: string }) {
   );
 }
 
+type AdminChallenge = AbyssChallengeView & { id: string; enabled: boolean; hpOverrides: HpOverrides };
+
 interface CycleData {
   id: string;
   name: string;
@@ -106,7 +109,86 @@ interface CycleData {
   matches: number;
   source: "MANUAL" | "WIKI";
   syncedAt: string | null;
-  challenges: (AbyssChallengeView & { id: string; enabled: boolean })[];
+  challenges: AdminChallenge[];
+}
+
+/** Aceita "4,75" ou "4.75"; vazio = sem multiplicador. */
+function parseMultiplier(text: string): number | null | "invalid" {
+  if (!text.trim()) return null;
+  const n = Number(text.trim().replace(",", "."));
+  return Number.isFinite(n) && n > 0 && n <= 100 ? n : "invalid";
+}
+
+function ChallengeHpEditor({ challenge }: { challenge: AdminChallenge }) {
+  const [pending, start] = useTransition();
+  const [multiplier, setMultiplier] = useState(challenge.hpMultiplier ? challenge.hpMultiplier.toLocaleString("pt-BR") : "");
+  const [overrides, setOverrides] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(challenge.hpOverrides).map(([k, v]) => [k, formatHp(v)])),
+  );
+  const mult = parseMultiplier(multiplier);
+  const save = () =>
+    start(async () => {
+      if (mult === "invalid") {
+        toast.error("Multiplicador inválido. Use, por exemplo, 4,75");
+        return;
+      }
+      const hpOverrides = Object.fromEntries(
+        Object.entries(overrides)
+          .map(([k, v]) => [k, Number(v.replace(/\D/g, ""))] as const)
+          .filter(([, v]) => v > 0),
+      );
+      const r = await setChallengeHpAction(challenge.id, { hpMultiplier: mult, hpOverrides });
+      if (r.ok) toast.success("HP salvo");
+      else toast.error(r.error);
+    });
+  return (
+    <div className="grid content-start gap-2 rounded-md border bg-background/40 p-3 text-sm" data-testid={`hp-editor-${challenge.chamber}-${challenge.half}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">
+          {challenge.floor}-{challenge.chamber} · {challenge.half === "FIRST" ? "1ª" : "2ª"} metade
+          {challenge.enemyLevel && <span className="font-normal text-muted-foreground"> · nível {challenge.enemyLevel}</span>}
+        </span>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Multiplicador
+          <Input
+            className={cn("h-8 w-20 text-right", mult === "invalid" && "border-destructive")}
+            inputMode="decimal"
+            placeholder="ex.: 4,75"
+            value={multiplier}
+            onChange={(e) => setMultiplier(e.target.value)}
+          />
+        </label>
+      </div>
+      {(challenge.enemies ?? []).map((e) => {
+        const key = enemyKey(e);
+        const computed = e.baseHp != null && typeof mult === "number" ? Math.round(e.baseHp * mult) : null;
+        return (
+          <div key={key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+            <span className="min-w-0" title={e.nameEn}>
+              <span className="block truncate">
+                {e.name}
+                {e.count && e.count > 1 ? ` ×${e.count}` : ""}
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                {e.baseHp != null ? `base ${formatHp(Math.round(e.baseHp))}` : "sem HP na fonte: informe à mão"}
+              </span>
+            </span>
+            <Input
+              className="h-8 w-32 text-right tabular-nums"
+              inputMode="numeric"
+              aria-label={`HP no Abismo de ${e.name}`}
+              placeholder={computed ? formatHp(computed) : "HP no Abismo"}
+              value={overrides[key] ?? ""}
+              onChange={(ev) => setOverrides({ ...overrides, [key]: ev.target.value })}
+            />
+          </div>
+        );
+      })}
+      <Button size="sm" variant="outline" className="w-fit" disabled={pending} onClick={save}>
+        {pending ? <Loader2 className="animate-spin" /> : <Save />} Salvar HP
+      </Button>
+    </div>
+  );
 }
 
 export function CycleCard({ cycle, current }: { cycle: CycleData; current: boolean }) {
@@ -156,6 +238,22 @@ export function CycleCard({ cycle, current }: { cycle: CycleData; current: boole
               <summary className="cursor-pointer text-sm font-medium">Inimigos e perturbações (andar 12)</summary>
               <div className="mt-3">
                 <AbyssFloorView challenges={cycle.challenges.filter((c) => c.enemies?.length)} compact />
+              </div>
+            </details>
+          )}
+          {cycle.challenges.some((c) => c.enemies?.length) && (
+            <details className="mt-3 rounded-lg border bg-background/30 p-3">
+              <summary className="cursor-pointer text-sm font-medium">HP no Abismo</summary>
+              <p className="mt-2 text-xs text-muted-foreground">
+                As fontes trazem só o HP de mundo aberto no nível da câmara. Informe o multiplicador do Abismo de cada metade (ex.: 4,75) ou o HP exato de um
+                inimigo, que tem prioridade. Partidas já criadas não mudam.
+              </p>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {cycle.challenges
+                  .filter((c) => c.enemies?.length)
+                  .map((ch) => (
+                    <ChallengeHpEditor key={ch.id} challenge={ch} />
+                  ))}
               </div>
             </details>
           )}

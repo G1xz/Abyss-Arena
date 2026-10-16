@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { parseSequence, buildSequence, type DraftPreset } from "@/domain/draft";
 import { parseDuration } from "@/domain/results";
-import { addChallenge, createCycle, setChallengeEnabled, updateCycle } from "@/server/abyss/service";
+import { addChallenge, createCycle, setChallengeEnabled, setChallengeHp, updateCycle } from "@/server/abyss/service";
 import { syncAbyss } from "@/server/abyss/sync";
 import { writeAuditLog } from "@/server/audit";
 import { assertAdmin } from "@/server/auth/accounts";
@@ -198,6 +198,12 @@ export async function addChallengeAction(cycleId: string, input: { floor: number
   return run(async (u) => {
     await addChallenge(u, cycleId, input);
   });
+}
+
+export async function setChallengeHpAction(challengeId: string, input: { hpMultiplier: number | null; hpOverrides: Record<string, number> }) {
+  return run(async (u) => {
+    await setChallengeHp(u, challengeId, input);
+  }, ["/admin/abyss", "/play"]);
 }
 
 export async function syncAbyssAction() {

@@ -1,0 +1,29 @@
+{
+ "response": 200,
+ "data": {
+  "95": {
+   "curveInfos": {
+    "GROW_CURVE_HP": 2042.75903,
+    "GROW_CURVE_HP_LITTLEMONSTER": 1,
+    "GROW_CURVE_HP_2": 3344.2771,
+    "GROW_CURVE_HP_ENVIRONMENT": 1411.73816
+   }
+  },
+  "98": {
+   "curveInfos": {
+    "GROW_CURVE_HP": 2256.93701,
+    "GROW_CURVE_HP_LITTLEMONSTER": 1,
+    "GROW_CURVE_HP_2": 3791.26855,
+    "GROW_CURVE_HP_ENVIRONMENT": 1576.96631
+   }
+  },
+  "100": {
+   "curveInfos": {
+    "GROW_CURVE_HP": 2706.50195,
+    "GROW_CURVE_HP_LITTLEMONSTER": 1,
+    "GROW_CURVE_HP_2": 4082.74585,
+    "GROW_CURVE_HP_ENVIRONMENT": 1674.8092
+   }
+  }
+ }
+}
