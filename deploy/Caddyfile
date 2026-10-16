@@ -1,0 +1,5 @@
+# HTTPS automático (Let's Encrypt). WebSockets do Socket.IO são repassados nativamente.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

@@ -151,7 +151,7 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
               : "Compartilhe o código da sala com seu oponente."}
         </p>
         <div className="flex flex-wrap gap-2">
-          {isHost ? (
+          {!mySeat ? null : isHost ? (
             <>
               <Button variant="ghost" className="text-destructive" disabled={busy !== null} onClick={() => run("cancel", "match:cancel", {}, "Sala cancelada")} data-testid="cancel-room">
                 <X /> Cancelar sala

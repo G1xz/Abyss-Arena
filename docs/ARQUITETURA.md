@@ -1,0 +1,86 @@
+# Arquitetura
+
+Monólito modular em TypeScript. Um único processo Node atende HTTP (Next.js), WebSocket (Socket.IO) e executa os jobs periódicos. O **PostgreSQL é a fonte da verdade**: nenhuma informação competitiva vive apenas no React ou na memória do Socket.IO.
+
+```
+            navegador
+   ┌────────────┴─────────────┐
+   │ HTTP (páginas, actions)  │ WebSocket (/socket.io)
+   ▼                          ▼
+┌──────────────────────── server.ts ────────────────────────┐
+│  Next.js App Router        Socket.IO        Agendador     │
+│  (RSC + Server Actions)    (salas/draft)    (jobs)        │
+│            └────────────┬──────┴──────────────┘           │
+│                 src/server/* (serviços)                   │
+│                 src/domain/* (regras puras)               │
+└────────────────────────────┬──────────────────────────────┘
+                             ▼
+                        PostgreSQL
+```
+
+## Camadas
+
+| Pasta | Responsabilidade | Depende de |
+|---|---|---|
+| `src/domain` | Regras puras e determinísticas: motor de draft, avaliação de deck, vencedor, BalanceEngine. Sem I/O; usadas no servidor **e** no cliente (pré-visualização). | nada |
+| `src/server` | Casos de uso com banco, autorização, transações, auditoria e rate limit. Toda regra competitiva é reaplicada aqui. | domain, Prisma |
+| `src/app` | Páginas (Server Components) e Server Actions finas, que validam a sessão e delegam aos serviços. | server |
+| `server.ts` | Processo persistente: Next + Socket.IO + jobs. | server |
+
+Os serviços recebem o usuário (`SessionUser`) explicitamente e checam permissões por conta própria (`assertAdmin`, `requireSeat`). A UI nunca é tratada como barreira de segurança.
+
+## Módulos
+
+- **Catálogo** (`server/catalog`): interface `CharacterCatalogProvider` com três implementações. `YattaCatalogProvider` é a primária (nomes em PT). `JmpCatalogProvider` é a alternativa. `SnapshotCatalogProvider` é o último recurso, usado só pelo seed. A normalização gera um slug canônico a partir do nome em inglês (comum entre as fontes), consolida as variantes do Viajante, descarta não jogáveis (sem elemento), não lançados e versões beta. A sincronização nunca apaga personagens nem preços: ausências viram `missingFromSource`, e respostas suspeitas de serem parciais não marcam ausências. Personagens novos entram com `competitiveEnabled = false`.
+- **Preços** (`server/pricing`): `PriceVersion` com estados `DRAFT → (SCHEDULED) → ACTIVE → ARCHIVED`. Um índice único parcial no banco garante no máximo um rascunho, um agendamento e uma tabela vigente. Toda escrita passa por um *advisory lock*. Cada alteração gera um `PriceChange` (anterior, novo, origem MANUAL/SUGGESTED/INITIAL, justificativa, admin, aprovação e vigência) e um `AdminAuditLog`.
+- **Decks** (`server/decks`): validação no servidor contra a tabela vigente. Um deck que fica inválido com uma nova tabela é mantido e mostra o excesso.
+- **Partidas** (`server/matches`): salas, motor de draft e resultados. Cada partida congela a configuração (`Match.config`), as regras do Abismo (`Match.rules`) e, no início do draft, os decks em `MatchDeckSnapshot` + `MatchDeckSnapshotEntry` (custo, nome, elemento, ícone). Mudanças posteriores de catálogo, preço ou deck não alteram partidas já iniciadas.
+- **Balanceamento** (`domain/balance.ts` + `server/balance`): ver [BALANCEAMENTO.md](BALANCEAMENTO.md).
+- **Jobs** (`server/jobs/scheduler.ts`): a cada 10 min verifica publicações agendadas, métricas diárias, propostas semanais e a sincronização diária do catálogo. A tabela `JobRun` (chave única `job + período`) garante execução única por período, mesmo após reinícios. Falhas são re-tentadas após 1 h.
+
+## Tempo real
+
+- O Socket.IO compartilha o servidor HTTP do Next (`destroyUpgrade: false`, para não interferir no HMR do Next em desenvolvimento).
+- **Autenticação do socket**: o handshake lê o mesmo cookie de sessão do site. A sessão é revalidada em cada ação, então logout ou mudança de papel valem na hora.
+- **Fluxo**: o cliente emite `match:*` com ack; o serviço valida e persiste numa transação; depois do commit, `notifyMatchChanged` publica um `match:state` para cada socket da sala, montado por espectador.
+- **Reconexão e atualização da página**: o estado inicial vem do servidor no render da página. A cada (re)conexão o cliente reemite `match:subscribe` e recebe o estado completo do banco. O cliente descarta estados com `revision` menor que o atual, o que evita aplicar mensagens fora de ordem.
+- **Presença** (quem está conectado) fica em memória: é informação não crítica. Para várias instâncias, troque por um adapter Redis do Socket.IO.
+
+## Concorrência e integridade
+
+- Toda mutação de partida roda numa transação que começa com `SELECT ... FOR UPDATE` na linha da partida, o que serializa ações concorrentes.
+- O motor de draft valida participante, turno, passo esperado (`stepIndex`: rejeita ações atrasadas e duplicadas), propriedade do personagem e disponibilidade.
+- Segunda barreira no banco: `DraftAction @@unique([matchId, stepIndex])` e `@@unique([matchId, type, targetSeat, characterId])`.
+- `CHECK (cost > 0)` e `CHECK (timeMs > 0)`; pontos sempre inteiros.
+- O teste `concorrência: ações simultâneas no mesmo turno…` dispara 4 ações paralelas e verifica que só uma é gravada.
+
+## Autenticação
+
+Usamos autenticação própria em vez do Auth.js. O provider de credenciais do Auth.js só funciona com sessões JWT, e o servidor Socket.IO precisa validar a mesma sessão no handshake e revogá-la na hora. A solução:
+
+- **Senha**: scrypt (Node `crypto`), N=2¹⁵, r=8, p=3 (parâmetros da OWASP), com sal por usuário e os parâmetros gravados no hash.
+- **Sessões**: token aleatório de 256 bits no cookie `httpOnly`, `SameSite=Lax` e `Secure` em produção. O banco guarda só o SHA-256 do token. Validade de 30 dias, renovada (sliding) no máximo uma vez por dia.
+- **Recuperação de acesso**: token de uso único com validade de 1 h, enviado por SMTP. Fica desabilitada se o SMTP não estiver configurado. A resposta não revela se o e-mail existe.
+- **Papéis**: `USER` e `ADMIN`. Rotas `/admin/*` respondem 404 para quem não é admin, e todas as funções administrativas checam o papel no servidor.
+
+## Segurança
+
+- Zod em todas as entradas: Server Actions, eventos Socket.IO e serviços.
+- Rate limiting em memória (janela deslizante) para login, cadastro, recuperação, criação de sala, ações de draft, envio de resultados e ações administrativas.
+- Erros de domínio (`AppError`) têm mensagens seguras. Os demais viram "Erro interno" e o detalhe só vai para o log do servidor.
+- Proteções básicas contra fraude: não é possível jogar contra si mesmo; limite de 3 partidas ativas por jogador; tempo dentro de limites configuráveis; confirmação bilateral; contestação com decisão administrativa auditada; só resultados validados contam para ranking e balanceamento.
+- Cabeçalhos: `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`.
+- Server Actions têm checagem de CSRF por Origin/Host feita pelo Next.
+
+## Modelo de dados (resumo)
+
+`User`, `Session`, `PasswordResetToken` · `Character`, `PriceVersion`, `CharacterPrice`, `PriceChange` · `Deck`, `DeckCharacter` · `AbyssCycle`, `AbyssChallenge` · `Match`, `MatchPlayer`, `MatchDeckSnapshot`, `MatchDeckSnapshotEntry`, `DraftAction`, `MatchEvent` · `MatchResult`, `ResultEvidence`, `MatchDispute` · `BalanceRun`, `BalanceMetric`, `BalanceProposal` · `AdminAuditLog`, `SystemSetting`, `JobRun`.
+
+Detalhes em [`prisma/schema.prisma`](../prisma/schema.prisma).
+
+## Pontos de extensão previstos
+
+- **Timer por turno**: `DraftConfig.turnTimeoutSeconds` já existe na configuração congelada. Basta um job que aplique a ação padrão ao expirar.
+- **ELO/MMR**: `User.rating` está reservado. O ranking atual usa vitórias, taxa e derrotas.
+- **Drafts intercalados**: a sequência é declarativa (`BAN_PLAYER_A, PICK_PLAYER_B, ...`), e o preset `INTERLEAVED` já existe.
+- **Escala horizontal**: troque o rate limit e a presença em memória por Redis e use `@socket.io/redis-adapter`. Defina `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.

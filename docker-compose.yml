@@ -1,0 +1,72 @@
+# Abyss Arena — ambiente local ou VPS (Ubuntu amd64/arm64).
+#   cp .env.example .env   # e ajuste as variáveis
+#   docker compose up -d --build
+#   docker compose exec app npm run db:seed
+# Com HTTPS automático (Caddy): defina DOMAIN no .env e use --profile proxy.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-abyss}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-abyss_arena}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    image: abyss-arena:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-abyss}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-abyss_arena}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NICKNAME: ${ADMIN_NICKNAME:-Admin}
+      ADMIN_RESET_PASSWORD: ${ADMIN_RESET_PASSWORD:-false}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEED_OFFLINE: ${SEED_OFFLINE:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      JOBS_ENABLED: ${JOBS_ENABLED:-true}
+      CATALOG_SYNC_ENABLED: ${CATALOG_SYNC_ENABLED:-true}
+      CATALOG_PROVIDERS: ${CATALOG_PROVIDERS:-yatta,jmp}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

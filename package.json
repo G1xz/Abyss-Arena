@@ -33,6 +33,7 @@
     "next": "^16.4.2",
     "nodemailer": "^10.1.1",
     "pg": "^8.23.1",
+    "prisma": "^7.10.1",
     "radix-ui": "^1.8.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -41,6 +42,7 @@
     "socket.io-client": "^4.8.4",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
+    "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -55,9 +57,7 @@
     "cross-env": "^10.1.0",
     "embedded-postgres": "^18.4.0-beta.17",
     "esbuild": "^0.28.2",
-    "prisma": "^7.10.1",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"
   }

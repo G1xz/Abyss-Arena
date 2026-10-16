@@ -47,7 +47,20 @@ async function startEmbedded(): Promise<{ serverUrl: string; stop: () => Promise
   });
   if (!existsSync(path.join(databaseDir, "PG_VERSION"))) await instance.initialise();
   await instance.start();
-  return { serverUrl, stop: () => instance.stop() };
+  return {
+    serverUrl,
+    // Desligamento limpo via pg_ctl. No Windows, o stop() do pacote usa "taskkill /f", que pode deixar
+    // processos filhos órfãos segurando a porta.
+    stop: async () => {
+      const platform = process.platform === "win32" ? "windows" : process.platform;
+      const pgCtl = path.join(ROOT, "node_modules", "@embedded-postgres", `${platform}-${process.arch}`, "native", "bin", process.platform === "win32" ? "pg_ctl.exe" : "pg_ctl");
+      try {
+        execFileSync(pgCtl, ["stop", "-D", databaseDir, "-m", "fast", "-w"], { stdio: "pipe" });
+      } catch {
+        await instance.stop();
+      }
+    },
+  };
 }
 
 export async function provisionDatabase(database: string): Promise<{ url: string; stop: () => Promise<void> }> {
