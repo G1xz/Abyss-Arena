@@ -1,7 +1,7 @@
 {
  "source": "Abyss Cup (x1 russo), planilha 1Custos/abyss_cup_custos_personagens.xlsx",
  "sourceBudget": 500,
- "note": "Custos absolutos por constelação (C0..C6) no orçamento de origem; o import escala para o orçamento atual.",
+ "note": "Custos absolutos por constelação (C0..C6), como na planilha. O import usa os valores sem conversão (fator 1); sourceBudget é o orçamento do formato original.",
  "characters": [
   {
    "slug": "aino",

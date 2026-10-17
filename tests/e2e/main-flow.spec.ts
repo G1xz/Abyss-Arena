@@ -11,7 +11,7 @@ import { E2E } from "../../playwright.config";
 const run = Date.now().toString(36).slice(-5);
 const PASSWORD = "senha-forte-123";
 // 7× 4★ em C6 + 4× 5★ em C0 = 11 personagens (mínimo do formato). Custos da tabela inicial
-// (Abyss Cup ×2): deck A = 100 pontos, deck B = 136. Bennett e Xingqiu (C6) estão nos dois decks: há imunidade.
+// (Abyss Cup): deck A = 50 pontos, deck B = 68. Bennett e Xingqiu (C6) estão nos dois decks: há imunidade.
 const A = {
   nick: `Alpha${run}`,
   email: `alpha${run}@e2e.local`,
@@ -94,8 +94,8 @@ test("fluxo competitivo completo", async ({ browser }) => {
   // 3. Personagens importados do HoYoLAB (colar texto) e decks válidos dentro do orçamento.
   await importRoster(pageA, A);
   await importRoster(pageB, B);
-  await buildDeck(pageA, "Deck Alpha", [...A.fours, ...A.fives], 100);
-  await buildDeck(pageB, "Deck Bravo", [...B.fours, ...B.fives], 136);
+  await buildDeck(pageA, "Deck Alpha", [...A.fours, ...A.fives], 50);
+  await buildDeck(pageB, "Deck Bravo", [...B.fours, ...B.fives], 68);
 
   // 4. A desafia B pelo nickname (B está online: o convite chega em tempo real).
   await pageB.goto("/dashboard");
@@ -209,11 +209,11 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await admin.reload();
   await expect(admin.getByText("Tabela vigente v2")).toBeVisible();
 
-  // 17. Histórico preservado: a partida mantém os custos congelados (100 e 136 pts),
+  // 17. Histórico preservado: a partida mantém os custos congelados (50 e 68 pts),
   // enquanto os decks salvos já são avaliados com a nova tabela; a v1 continua consultável.
   await pageA.goto(matchUrl);
-  await expect(pageA.getByText("(100 pts)")).toHaveCount(1);
-  await expect(pageA.getByText("(136 pts)")).toHaveCount(1);
+  await expect(pageA.getByText("(50 pts)")).toHaveCount(1);
+  await expect(pageA.getByText("(68 pts)")).toHaveCount(1);
   const deckTotal = async (page: Page) => {
     await page.goto("/decks");
     const text = await page.getByTestId("deck-card").first().locator("span.font-display").first().textContent();
@@ -221,8 +221,8 @@ test("fluxo competitivo completo", async ({ browser }) => {
   };
   // A proposta muda o custo base (C0): afeta os 5★ em C0 dos decks; os 4★ em C6 têm custo fixo na tabela.
   const withProposal = (fives: string[], total: number) => total + (fives.includes(characterName) ? newCost! - oldCost! : 0);
-  expect(await deckTotal(pageA)).toBe(withProposal(A.fives, 100));
-  expect(await deckTotal(pageB)).toBe(withProposal(B.fives, 136));
+  expect(await deckTotal(pageA)).toBe(withProposal(A.fives, 50));
+  expect(await deckTotal(pageB)).toBe(withProposal(B.fives, 68));
   await admin.goto("/admin/prices");
   await expect(admin.getByRole("link", { name: "v1" })).toBeVisible();
   await admin.getByRole("link", { name: "v2" }).click();

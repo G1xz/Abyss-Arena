@@ -2,8 +2,8 @@
  * Seed idempotente.
  *  - Conta ADMIN a partir de ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_NICKNAME (nunca fixa no código).
  *  - Catálogo de personagens (API pública; snapshot local como último recurso).
- *  - Tabela de preços inicial da Abyss Cup (prisma/data/abyss-cup-prices.json), escalada para o orçamento
- *    atual, com o custo de cada constelação; publicada como v1. Bancos que ainda só têm preços provisórios
+ *  - Tabela de preços inicial da Abyss Cup (prisma/data/abyss-cup-prices.json), com os valores da planilha
+ *    e o custo de cada constelação; publicada como v1. Bancos que ainda só têm preços provisórios
  *    recebem essa tabela como nova versão. Tabelas já revisadas por um admin não são tocadas.
  *  - Ciclo do Abismo vigente (andar 12, 3 câmaras × 2 metades).
  *  - SEED_DEMO_DATA=true: jogadores, decks e partidas de demonstração criados pelos fluxos reais.
@@ -18,10 +18,9 @@ import { SnapshotCatalogProvider } from "@/server/catalog/snapshot";
 import { syncCatalog } from "@/server/catalog/sync";
 import { YattaCatalogProvider } from "@/server/catalog/yatta";
 import { prisma } from "@/server/db";
-import { scalePriceTable } from "@/domain/price-table";
+import { INITIAL_TABLE_SCALE, scalePriceTable } from "@/domain/price-table";
 import { loadAbyssCupTable } from "@/server/pricing/import";
 import { publishInitialPriceVersion, publishProvisionalTable, type TablePrice } from "@/server/pricing/service";
-import { getSettings } from "@/server/settings";
 import { ensureDemoAccounts, seedDemoData } from "./seed-demo";
 
 /** Custos base (C0) provisórios para o orçamento de 1000 — não representam balanceamento validado. */
@@ -72,13 +71,13 @@ async function seedCatalog() {
 const INITIAL_LABEL = "Tabela inicial (Abyss Cup)";
 
 /**
- * Tabela inicial: custos da Abyss Cup (orçamento 500) escalados para o orçamento atual, com o custo de cada
- * constelação. Personagens fora da tabela recebem o preço provisório por raridade.
+ * Tabela inicial: custos da Abyss Cup com os valores da planilha, incluindo o custo de cada constelação.
+ * Personagens fora da tabela recebem o preço provisório por raridade.
  */
-function initialTable(characters: { id: string; slug: string; rarity: number }[], budget: number): TablePrice[] {
+function initialTable(characters: { id: string; slug: string; rarity: number }[]): TablePrice[] {
   const source = loadAbyssCupTable();
-  const bySlug = new Map(scalePriceTable(source, budget).map((p) => [p.slug, p]));
-  const justification = `Tabela inicial importada da Abyss Cup (orçamento ${source.sourceBudget} → ${budget})`;
+  const bySlug = new Map(scalePriceTable(source, INITIAL_TABLE_SCALE).map((p) => [p.slug, p]));
+  const justification = "Tabela inicial importada da Abyss Cup (valores da planilha)";
   return characters.map((c) => {
     const p = bySlug.get(c.slug);
     return p
@@ -87,12 +86,12 @@ function initialTable(characters: { id: string; slug: string; rarity: number }[]
   });
 }
 
-const INITIAL_NOTES = "Custos por constelação da Abyss Cup (x1 russo), escalados para o orçamento de 1000. Personagens marcados com * estão fora da tabela e têm preço provisório.";
+const INITIAL_NOTES =
+  "Custos por constelação da Abyss Cup (x1 russo), com os valores da planilha (o formato original usa orçamento de 500). Personagens marcados com * estão fora da tabela e têm preço provisório.";
 
 async function seedPrices(adminId: string | null) {
   const characters = await prisma.character.findMany();
-  const budget = (await getSettings("competitive")).deckBudget;
-  const table = initialTable(characters, budget);
+  const table = initialTable(characters);
   const fromCup = table.filter((p) => p.provisional === false).length;
   const published = await publishInitialPriceVersion(table, { adminId, label: INITIAL_LABEL, notes: INITIAL_NOTES });
   if (published) {

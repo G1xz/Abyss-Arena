@@ -17,7 +17,7 @@ beforeEach(async () => {
 describe("importação da tabela da Abyss Cup", () => {
   it("leva custos e constelações ao rascunho; só valem depois de publicar", async () => {
     const cup = loadAbyssCupTable();
-    const scaled = new Map(scalePriceTable(cup, 1000).map((p) => [p.slug, p]));
+    const scaled = new Map(scalePriceTable(cup).map((p) => [p.slug, p]));
     const report = await importPriceTableToDraft(world.admin, cup, { justification: "Tabela da Abyss Cup" });
     const inWorld = world.characters.filter((c) => scaled.has(c.slug));
     expect(report.applied).toBe(inWorld.length);
@@ -47,18 +47,18 @@ describe("importação da tabela da Abyss Cup", () => {
       sourceBudget: 500,
       characters: [
         { slug: free!.slug, name: free!.name, element: free!.element, costs: [0, 0, 0, 0, 0, 0, 1] },
-        { slug: pricey!.slug, name: pricey!.name, element: pricey!.element, costs: [250, 250, 260, 270, 280, 290, 300] },
+        { slug: pricey!.slug, name: pricey!.name, element: pricey!.element, costs: [450, 450, 460, 470, 480, 490, 500] },
         { slug: "nao-existe", name: "Ninguém", element: "PYRO", costs: [1, 1, 1, 1, 1, 1, 1] },
       ],
     };
     const report = await importPriceTableToDraft(world.admin, table, { justification: "Teste de limites" });
-    expect(report).toMatchObject({ applied: 2, missing: ["nao-existe"], bounds: { min: 0, max: 500 } });
-    expect(await getSettings("competitive")).toMatchObject({ minCharacterCost: 0, maxCharacterCost: 500 });
+    expect(report).toMatchObject({ applied: 2, missing: ["nao-existe"], bounds: { min: 0, max: 450 } });
+    expect(await getSettings("competitive")).toMatchObject({ minCharacterCost: 0, maxCharacterCost: 450 });
     expect(await prisma.adminAuditLog.count({ where: { action: "SETTINGS_COMPETITIVE_UPDATED" } })).toBe(1);
 
     await publishDraft(world.admin, {});
     const active = await prisma.priceVersion.findFirstOrThrow({ where: { status: "ACTIVE" }, include: { prices: true } });
-    expect(active.prices.find((p) => p.characterId === free!.id)).toMatchObject({ cost: 0, constellationOverrides: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 2 } });
+    expect(active.prices.find((p) => p.characterId === free!.id)).toMatchObject({ cost: 0, constellationOverrides: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1 } });
   });
 
   it("só administradores importam", async () => {

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { scalePriceTable, validatePriceTable, type PriceTableSource } from "@/domain/price-table";
+import { INITIAL_TABLE_SCALE, scalePriceTable, validatePriceTable, type PriceTableSource } from "@/domain/price-table";
 import { writeAuditLog } from "../audit";
 import { assertAdmin } from "../auth/accounts";
 import type { SessionUser } from "../auth/session";
@@ -9,7 +9,7 @@ import { AppError } from "../errors";
 import { getSettings, saveSettings } from "../settings";
 import { setDraftPriceTx } from "./service";
 
-/** Tabela inicial: custos da Abyss Cup (orçamento 500), em prisma/data/abyss-cup-prices.json. */
+/** Tabela inicial: custos da Abyss Cup (formato original com orçamento 500), em prisma/data/abyss-cup-prices.json. */
 export function loadAbyssCupTable(): PriceTableSource {
   const file = path.join(process.cwd(), "prisma/data/abyss-cup-prices.json");
   const table = JSON.parse(readFileSync(file, "utf8")) as PriceTableSource;
@@ -30,10 +30,14 @@ export interface ImportReport {
 }
 
 /**
- * Grava a tabela escalada no rascunho de preços (custo base + ajustes de C1 a C6 por personagem).
- * Nada muda para os jogadores até um administrador publicar o rascunho.
+ * Grava a tabela no rascunho de preços (custo base + ajustes de C1 a C6 por personagem), com os valores
+ * da planilha (ou multiplicados por `scale`). Nada muda para os jogadores até um administrador publicar.
  */
-export async function importPriceTableToDraft(admin: SessionUser, table: PriceTableSource, options: { justification: string; db?: Db }): Promise<ImportReport> {
+export async function importPriceTableToDraft(
+  admin: SessionUser,
+  table: PriceTableSource,
+  options: { justification: string; scale?: number; db?: Db },
+): Promise<ImportReport> {
   assertAdmin(admin);
   const errors = validatePriceTable(table);
   if (errors.length) throw new AppError("VALIDATION", errors[0]!);
@@ -41,7 +45,7 @@ export async function importPriceTableToDraft(admin: SessionUser, table: PriceTa
   return db.$transaction(
     async (tx) => {
       const settings = await getSettings("competitive", tx);
-      const prices = scalePriceTable(table, settings.deckBudget);
+      const prices = scalePriceTable(table, options.scale ?? INITIAL_TABLE_SCALE);
       const characters = await tx.character.findMany({ select: { id: true, slug: true, name: true } });
       const bySlug = new Map(characters.map((c) => [c.slug, c]));
 

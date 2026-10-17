@@ -1,7 +1,8 @@
 /**
- * Tabela de preços externa (ex.: Abyss Cup, x1 russo): custo absoluto de cada constelação (C0..C6)
- * no orçamento de origem. Ao importar, os custos são escalados para o orçamento atual
- * (500 → 1000 = ×2): C0 vira o custo base e C1..C6 viram os ajustes do personagem.
+ * Tabela de preços externa (ex.: Abyss Cup, x1 russo): custo absoluto de cada constelação (C0..C6).
+ * Ao importar, C0 vira o custo base e C1..C6 viram os ajustes do personagem. Os valores entram como
+ * estão na planilha (fator 1): com o nosso orçamento de 1000, sobra o dobro da folga do formato
+ * original (500). Um fator diferente pode ser passado para reescalar.
  */
 import type { ConstellationOverrides } from "./pricing";
 
@@ -17,6 +18,9 @@ export interface ScaledPrice {
   overrides: ConstellationOverrides;
 }
 
+/** Fator aplicado à tabela inicial: valores da planilha, sem conversão. */
+export const INITIAL_TABLE_SCALE = 1;
+
 export function validatePriceTable(table: PriceTableSource): string[] {
   const errors: string[] = [];
   if (!(table.sourceBudget > 0)) errors.push("Orçamento de origem inválido.");
@@ -29,8 +33,7 @@ export function validatePriceTable(table: PriceTableSource): string[] {
   return errors;
 }
 
-export function scalePriceTable(table: PriceTableSource, targetBudget: number): ScaledPrice[] {
-  const factor = targetBudget / table.sourceBudget;
+export function scalePriceTable(table: PriceTableSource, factor = INITIAL_TABLE_SCALE): ScaledPrice[] {
   return table.characters.map((c) => {
     const scaled = c.costs.map((v) => Math.round(v * factor));
     const overrides = Object.fromEntries(scaled.slice(1).map((v, i) => [String(i + 1), v])) as ConstellationOverrides;
