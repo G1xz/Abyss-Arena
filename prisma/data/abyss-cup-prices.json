@@ -1,0 +1,795 @@
+{
+ "source": "Abyss Cup (x1 russo), planilha 1Custos/abyss_cup_custos_personagens.xlsx",
+ "sourceBudget": 500,
+ "note": "Custos absolutos por constelação (C0..C6) no orçamento de origem; o import escala para o orçamento atual.",
+ "characters": [
+  {
+   "slug": "aino",
+   "name": "Aino",
+   "element": "HYDRO",
+   "costs": [4, 5, 6, 6, 6, 6, 14]
+  },
+  {
+   "slug": "albedo",
+   "name": "Albedo",
+   "element": "GEO",
+   "costs": [9, 14, 22, 29, 33, 33, 47]
+  },
+  {
+   "slug": "alhaitham",
+   "name": "Alhaitham",
+   "element": "DENDRO",
+   "costs": [1, 2, 3, 4, 5, 6, 16]
+  },
+  {
+   "slug": "aloy",
+   "name": "Aloy",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "alyosha",
+   "name": "Alyosha",
+   "element": "ELECTRO",
+   "costs": [4, 7, 9, 11, 12, 12, 26]
+  },
+  {
+   "slug": "amber",
+   "name": "Amber",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "arataki-itto",
+   "name": "Arataki Itto",
+   "element": "GEO",
+   "costs": [2, 2, 3, 3, 3, 3, 14]
+  },
+  {
+   "slug": "arlecchino",
+   "name": "Arlecchino",
+   "element": "PYRO",
+   "costs": [40, 50, 58, 75, 75, 75, 135]
+  },
+  {
+   "slug": "baizhu",
+   "name": "Baizhu",
+   "element": "DENDRO",
+   "costs": [1, 2, 4, 5, 6, 7, 8]
+  },
+  {
+   "slug": "barbara",
+   "name": "Barbara",
+   "element": "HYDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "beidou",
+   "name": "Beidou",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "bennett",
+   "name": "Bennett",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "candace",
+   "name": "Candace",
+   "element": "HYDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "charlotte",
+   "name": "Charlotte",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "chasca",
+   "name": "Chasca",
+   "element": "ANEMO",
+   "costs": [20, 48, 70, 79, 85, 93, 175]
+  },
+  {
+   "slug": "chevreuse",
+   "name": "Chevreuse",
+   "element": "PYRO",
+   "costs": [10, 10, 10, 10, 10, 10, 32]
+  },
+  {
+   "slug": "chiori",
+   "name": "Chiori",
+   "element": "GEO",
+   "costs": [3, 8, 12, 16, 22, 24, 60]
+  },
+  {
+   "slug": "chongyun",
+   "name": "Chongyun",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "citlali",
+   "name": "Citlali",
+   "element": "CRYO",
+   "costs": [30, 38, 50, 50, 52, 52, 70]
+  },
+  {
+   "slug": "clorinde",
+   "name": "Clorinde",
+   "element": "ELECTRO",
+   "costs": [8, 20, 48, 49, 50, 55, 75]
+  },
+  {
+   "slug": "collei",
+   "name": "Collei",
+   "element": "DENDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "columbina",
+   "name": "Columbina",
+   "element": "HYDRO",
+   "costs": [38, 44, 54, 62, 80, 82, 130]
+  },
+  {
+   "slug": "cyno",
+   "name": "Cyno",
+   "element": "ELECTRO",
+   "costs": [5, 18, 30, 30, 34, 34, 90]
+  },
+  {
+   "slug": "dahlia",
+   "name": "Dahlia",
+   "element": "HYDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 1]
+  },
+  {
+   "slug": "dehya",
+   "name": "Dehya",
+   "element": "PYRO",
+   "costs": [2, 2, 2, 2, 2, 2, 2]
+  },
+  {
+   "slug": "diluc",
+   "name": "Diluc",
+   "element": "PYRO",
+   "costs": [1, 2, 3, 3, 3, 3, 3]
+  },
+  {
+   "slug": "diona",
+   "name": "Diona",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 8]
+  },
+  {
+   "slug": "dori",
+   "name": "Dori",
+   "element": "ELECTRO",
+   "costs": [1, 1, 1, 1, 1, 1, 1]
+  },
+  {
+   "slug": "durin",
+   "name": "Durin",
+   "element": "PYRO",
+   "costs": [34, 44, 55, 62, 65, 67, 120]
+  },
+  {
+   "slug": "emilie",
+   "name": "Emilie",
+   "element": "DENDRO",
+   "costs": [3, 14, 27, 29, 40, 46, 70]
+  },
+  {
+   "slug": "escoffier",
+   "name": "Escoffier",
+   "element": "CRYO",
+   "costs": [46, 60, 65, 70, 71, 72, 90]
+  },
+  {
+   "slug": "eula",
+   "name": "Eula",
+   "element": "CRYO",
+   "costs": [1, 1, 1, 1, 1, 1, 2]
+  },
+  {
+   "slug": "faruzan",
+   "name": "Faruzan",
+   "element": "ANEMO",
+   "costs": [1, 1, 1, 1, 1, 1, 10]
+  },
+  {
+   "slug": "fischl",
+   "name": "Fischl",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "flins",
+   "name": "Flins",
+   "element": "ELECTRO",
+   "costs": [25, 43, 62, 72, 80, 82, 180]
+  },
+  {
+   "slug": "freminet",
+   "name": "Freminet",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "furina",
+   "name": "Furina",
+   "element": "HYDRO",
+   "costs": [19, 37, 47, 56, 60, 63, 64]
+  },
+  {
+   "slug": "gaming",
+   "name": "Gaming",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 1]
+  },
+  {
+   "slug": "ganyu",
+   "name": "Ganyu",
+   "element": "CRYO",
+   "costs": [16, 30, 35, 37, 45, 46, 55]
+  },
+  {
+   "slug": "gorou",
+   "name": "Gorou",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 2]
+  },
+  {
+   "slug": "hu-tao",
+   "name": "Hu Tao",
+   "element": "PYRO",
+   "costs": [4, 18, 22, 28, 30, 32, 36]
+  },
+  {
+   "slug": "iansan",
+   "name": "Iansan",
+   "element": "ELECTRO",
+   "costs": [4, 6, 8, 8, 12, 14, 29]
+  },
+  {
+   "slug": "ifa",
+   "name": "Ifa",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "illuga",
+   "name": "Illuga",
+   "element": "GEO",
+   "costs": [1, 1, 2, 2, 4, 4, 14]
+  },
+  {
+   "slug": "ineffa",
+   "name": "Ineffa",
+   "element": "ELECTRO",
+   "costs": [30, 41, 45, 47, 49, 49, 80]
+  },
+  {
+   "slug": "jahoda",
+   "name": "Jahoda",
+   "element": "ANEMO",
+   "costs": [1, 1, 1, 1, 1, 1, 3]
+  },
+  {
+   "slug": "jean",
+   "name": "Jean",
+   "element": "ANEMO",
+   "costs": [1, 1, 2, 2, 2, 2, 2]
+  },
+  {
+   "slug": "kachina",
+   "name": "Kachina",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "kaedehara-kazuha",
+   "name": "Kaedehara Kazuha",
+   "element": "ANEMO",
+   "costs": [8, 9, 12, 12, 12, 12, 14]
+  },
+  {
+   "slug": "kaeya",
+   "name": "Kaeya",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 3]
+  },
+  {
+   "slug": "kamisato-ayaka",
+   "name": "Kamisato Ayaka",
+   "element": "CRYO",
+   "costs": [45, 46, 48, 49, 55, 56, 64]
+  },
+  {
+   "slug": "kamisato-ayato",
+   "name": "Kamisato Ayato",
+   "element": "HYDRO",
+   "costs": [2, 2, 2, 2, 2, 2, 12]
+  },
+  {
+   "slug": "kaveh",
+   "name": "Kaveh",
+   "element": "DENDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "keqing",
+   "name": "Keqing",
+   "element": "ELECTRO",
+   "costs": [1, 1, 1, 1, 1, 1, 2]
+  },
+  {
+   "slug": "kinich",
+   "name": "Kinich",
+   "element": "DENDRO",
+   "costs": [14, 44, 60, 65, 67, 68, 135]
+  },
+  {
+   "slug": "kirara",
+   "name": "Kirara",
+   "element": "DENDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 5]
+  },
+  {
+   "slug": "klee",
+   "name": "Klee",
+   "element": "PYRO",
+   "costs": [8, 22, 31, 33, 39, 43, 78]
+  },
+  {
+   "slug": "kujou-sara",
+   "name": "Kujou Sara",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 2]
+  },
+  {
+   "slug": "kuki-shinobu",
+   "name": "Kuki Shinobu",
+   "element": "ELECTRO",
+   "costs": [1, 1, 2, 2, 2, 2, 3]
+  },
+  {
+   "slug": "lan-yan",
+   "name": "Lan Yan",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "lauma",
+   "name": "Lauma",
+   "element": "DENDRO",
+   "costs": [20, 25, 37, 43, 45, 49, 132]
+  },
+  {
+   "slug": "layla",
+   "name": "Layla",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 5]
+  },
+  {
+   "slug": "linnea",
+   "name": "Linnea",
+   "element": "GEO",
+   "costs": [25, 35, 50, 58, 65, 65, 155]
+  },
+  {
+   "slug": "lisa",
+   "name": "Lisa",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "lohen",
+   "name": "Lohen",
+   "element": "CRYO",
+   "costs": [53, 65, 85, 100, 108, 112, 150]
+  },
+  {
+   "slug": "lynette",
+   "name": "Lynette",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "lyney",
+   "name": "Lyney",
+   "element": "PYRO",
+   "costs": [9, 14, 21, 28, 33, 34, 49]
+  },
+  {
+   "slug": "mavuika",
+   "name": "Mavuika",
+   "element": "PYRO",
+   "costs": [58, 65, 95, 105, 113, 123, 185]
+  },
+  {
+   "slug": "mika",
+   "name": "Mika",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "mona",
+   "name": "Mona",
+   "element": "HYDRO",
+   "costs": [11, 14, 16, 16, 24, 24, 24]
+  },
+  {
+   "slug": "mualani",
+   "name": "Mualani",
+   "element": "HYDRO",
+   "costs": [45, 55, 65, 84, 94, 97, 125]
+  },
+  {
+   "slug": "nahida",
+   "name": "Nahida",
+   "element": "DENDRO",
+   "costs": [3, 4, 20, 21, 22, 25, 30]
+  },
+  {
+   "slug": "navia",
+   "name": "Navia",
+   "element": "GEO",
+   "costs": [10, 11, 20, 33, 42, 44, 60]
+  },
+  {
+   "slug": "nefer",
+   "name": "Nefer",
+   "element": "DENDRO",
+   "costs": [20, 40, 58, 65, 75, 80, 160]
+  },
+  {
+   "slug": "neuvillette",
+   "name": "Neuvillette",
+   "element": "HYDRO",
+   "costs": [20, 38, 44, 55, 58, 59, 67]
+  },
+  {
+   "slug": "nicole",
+   "name": "Nicole",
+   "element": "PYRO",
+   "costs": [35, 49, 61, 64, 67, 68, 120]
+  },
+  {
+   "slug": "nilou",
+   "name": "Nilou",
+   "element": "HYDRO",
+   "costs": [2, 3, 20, 20, 20, 20, 20]
+  },
+  {
+   "slug": "ningguang",
+   "name": "Ningguang",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "noelle",
+   "name": "Noelle",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "odette",
+   "name": "Odette",
+   "element": "CRYO",
+   "costs": [65, 78, 100, 108, 120, 120, 157]
+  },
+  {
+   "slug": "ororon",
+   "name": "Ororon",
+   "element": "ELECTRO",
+   "costs": [2, 3, 4, 5, 6, 7, 14]
+  },
+  {
+   "slug": "prune",
+   "name": "Prune",
+   "element": "ANEMO",
+   "costs": [5, 7, 8, 8, 8, 8, 17]
+  },
+  {
+   "slug": "qiqi",
+   "name": "Qiqi",
+   "element": "CRYO",
+   "costs": [8, 8, 8, 8, 8, 8, 14]
+  },
+  {
+   "slug": "raiden-shogun",
+   "name": "Raiden Shogun",
+   "element": "ELECTRO",
+   "costs": [2, 3, 10, 17, 22, 23, 27]
+  },
+  {
+   "slug": "razor",
+   "name": "Razor",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "rosaria",
+   "name": "Rosaria",
+   "element": "CRYO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "sandrone",
+   "name": "Sandrone",
+   "element": "CRYO",
+   "costs": [87, 95, 125, 150, 170, 175, 220]
+  },
+  {
+   "slug": "sangonomiya-kokomi",
+   "name": "Sangonomiya Kokomi",
+   "element": "HYDRO",
+   "costs": [6, 6, 6, 6, 6, 6, 6]
+  },
+  {
+   "slug": "sayu",
+   "name": "Sayu",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "sethos",
+   "name": "Sethos",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "shenhe",
+   "name": "Shenhe",
+   "element": "CRYO",
+   "costs": [10, 17, 25, 29, 33, 34, 45]
+  },
+  {
+   "slug": "shikanoin-heizou",
+   "name": "Shikanoin Heizou",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "sigewinne",
+   "name": "Sigewinne",
+   "element": "HYDRO",
+   "costs": [2, 3, 16, 16, 19, 21, 36]
+  },
+  {
+   "slug": "skirk",
+   "name": "Skirk",
+   "element": "CRYO",
+   "costs": [100, 120, 145, 150, 160, 165, 175]
+  },
+  {
+   "slug": "sucrose",
+   "name": "Sucrose",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "tartaglia",
+   "name": "Tartaglia",
+   "element": "HYDRO",
+   "costs": [1, 1, 1, 1, 1, 1, 3]
+  },
+  {
+   "slug": "thoma",
+   "name": "Thoma",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "tighnari",
+   "name": "Tighnari",
+   "element": "DENDRO",
+   "costs": [1, 1, 1, 1, 2, 2, 3]
+  },
+  {
+   "slug": "traveler-anemo",
+   "name": "Traveler",
+   "element": "ANEMO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "traveler-cryo",
+   "name": "Traveler",
+   "element": "CRYO",
+   "costs": [45, 45, 45, 45, 45, 45, 45]
+  },
+  {
+   "slug": "traveler-dendro",
+   "name": "Traveler",
+   "element": "DENDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "traveler-electro",
+   "name": "Traveler",
+   "element": "ELECTRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "traveler-geo",
+   "name": "Traveler",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "traveler-hydro",
+   "name": "Traveler",
+   "element": "HYDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "traveler-pyro",
+   "name": "Traveler",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "varesa",
+   "name": "Varesa",
+   "element": "ELECTRO",
+   "costs": [35, 45, 65, 73, 98, 108, 162]
+  },
+  {
+   "slug": "varka",
+   "name": "Varka",
+   "element": "ANEMO",
+   "costs": [45, 64, 80, 91, 96, 96, 162]
+  },
+  {
+   "slug": "venti",
+   "name": "Venti",
+   "element": "ANEMO",
+   "costs": [20, 33, 67, 73, 82, 90, 150]
+  },
+  {
+   "slug": "vesna",
+   "name": "Vesna",
+   "element": "ANEMO",
+   "costs": [64, 80, 112, 130, 145, 152, 200]
+  },
+  {
+   "slug": "vodyanitsa",
+   "name": "Vodyanitsa",
+   "element": "HYDRO",
+   "costs": [36, 48, 60, 63, 65, 67, 110]
+  },
+  {
+   "slug": "wanderer",
+   "name": "Wanderer",
+   "element": "ANEMO",
+   "costs": [1, 2, 3, 4, 5, 6, 42]
+  },
+  {
+   "slug": "wriothesley",
+   "name": "Wriothesley",
+   "element": "CRYO",
+   "costs": [14, 40, 50, 65, 67, 70, 130]
+  },
+  {
+   "slug": "xiangling",
+   "name": "Xiangling",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "xianyun",
+   "name": "Xianyun",
+   "element": "ANEMO",
+   "costs": [5, 7, 40, 40, 40, 40, 40]
+  },
+  {
+   "slug": "xiao",
+   "name": "Xiao",
+   "element": "ANEMO",
+   "costs": [4, 4, 4, 4, 4, 4, 4]
+  },
+  {
+   "slug": "xilonen",
+   "name": "Xilonen",
+   "element": "GEO",
+   "costs": [24, 25, 48, 49, 50, 50, 55]
+  },
+  {
+   "slug": "xingqiu",
+   "name": "Xingqiu",
+   "element": "HYDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "xinyan",
+   "name": "Xinyan",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "yae-miko",
+   "name": "Yae Miko",
+   "element": "ELECTRO",
+   "costs": [26, 45, 55, 59, 63, 64, 90]
+  },
+  {
+   "slug": "yanfei",
+   "name": "Yanfei",
+   "element": "PYRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "yaoyao",
+   "name": "Yaoyao",
+   "element": "DENDRO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "yelan",
+   "name": "Yelan",
+   "element": "HYDRO",
+   "costs": [10, 20, 35, 42, 48, 49, 63]
+  },
+  {
+   "slug": "yoimiya",
+   "name": "Yoimiya",
+   "element": "PYRO",
+   "costs": [1, 1, 1, 1, 1, 1, 2]
+  },
+  {
+   "slug": "yumemizuki-mizuki",
+   "name": "Yumemizuki Mizuki",
+   "element": "ANEMO",
+   "costs": [16, 45, 50, 51, 52, 53, 90]
+  },
+  {
+   "slug": "yun-jin",
+   "name": "Yun Jin",
+   "element": "GEO",
+   "costs": [0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "slug": "zhongli",
+   "name": "Zhongli",
+   "element": "GEO",
+   "costs": [1, 1, 1, 1, 1, 1, 1]
+  },
+  {
+   "slug": "zibai",
+   "name": "Zibai",
+   "element": "GEO",
+   "costs": [25, 40, 55, 64, 70, 75, 185]
+  }
+ ],
+ "skipped": [
+  {
+   "name": "Raiden Shogun (Bloom)",
+   "element": "ELECTRO",
+   "costs": [1, 1, 1, 1, 1, 1, 1],
+   "reason": "variante ou linha sem personagem no catálogo"
+  },
+  {
+   "name": "Sandrone (LGBT)",
+   "element": "CRYO",
+   "costs": [999, 999, 999, 999, 999, 999, 999],
+   "reason": "custo 999 (proibido no formato de origem) e sem personagem no catálogo"
+  },
+  {
+   "name": "No name 1",
+   "element": "ANEMO",
+   "costs": [15, 15, 15, 15, 15, 15, 15],
+   "reason": "variante ou linha sem personagem no catálogo"
+  },
+  {
+   "name": "No name 2",
+   "element": "ANEMO",
+   "costs": [15, 15, 15, 15, 15, 15, 15],
+   "reason": "variante ou linha sem personagem no catálogo"
+  }
+ ]
+}

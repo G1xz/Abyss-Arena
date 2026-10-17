@@ -11,7 +11,7 @@ const curveSchema = z.array(z.number().min(0).max(500)).length(7);
 export const competitiveSettingsSchema = z
   .object({
     deckBudget: z.number().int().min(10).max(100_000),
-    minCharacterCost: z.number().int().min(1).max(10_000),
+    minCharacterCost: z.number().int().min(0).max(10_000),
     maxCharacterCost: z.number().int().min(1).max(10_000),
     constellationCurve: z.object({ fourStar: curveSchema, fiveStar: curveSchema }),
     levelBonus: z.object({ level95: z.number().min(0).max(200), level100: z.number().min(0).max(200) }),
@@ -63,7 +63,8 @@ export function isLegacyDraft(draft: Partial<DraftConfig> & Record<string, unkno
 
 export const DEFAULT_COMPETITIVE_SETTINGS: CompetitiveSettings = {
   deckBudget: 1000,
-  minCharacterCost: 10,
+  // A tabela inicial (Abyss Cup ×2) tem personagens gratuitos.
+  minCharacterCost: 0,
   maxCharacterCost: 400,
   constellationCurve: DEFAULT_COST_RULES.constellationCurve,
   levelBonus: DEFAULT_COST_RULES.levelBonus,

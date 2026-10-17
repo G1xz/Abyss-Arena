@@ -125,7 +125,7 @@ export async function ensureDraft(tx: Tx, adminId: string | null) {
   return created;
 }
 
-const overrideValue = z.coerce.number().int("Ajustes devem ser inteiros").positive("Ajustes devem ser positivos").max(10_000);
+const overrideValue = z.coerce.number().int("Ajustes devem ser inteiros").nonnegative("Ajustes não podem ser negativos").max(10_000);
 export const setPriceSchema = z.object({
   characterId: z.string().min(1).max(64),
   cost: z.coerce.number().int("O preço deve ser inteiro"),
@@ -376,10 +376,30 @@ export async function publishDueScheduledVersions(db: Db = prisma, now = new Dat
   return db.$transaction((tx) => publishVersionTx(tx, due.id, due.createdById, now));
 }
 
+/** Preço de uma tabela completa publicada pelo seed. Sem `provisional`, o preço é marcado como provisório. */
+export interface TablePrice {
+  characterId: string;
+  cost: number;
+  overrides?: ConstellationOverrides;
+  provisional?: boolean;
+  justification?: string;
+}
+
+const PROVISIONAL_NOTES = "Preços provisórios por raridade. Não representam balanceamento competitivo validado.";
+
+function tablePriceRows(prices: TablePrice[]) {
+  return prices.map((p) => ({
+    characterId: p.characterId,
+    cost: p.cost,
+    constellationOverrides: p.overrides && Object.keys(p.overrides).length ? (p.overrides as Prisma.InputJsonValue) : undefined,
+    isProvisional: p.provisional ?? true,
+  }));
+}
+
 /** Cria e publica a primeira tabela (seed). Ignorado se já houver tabela vigente. */
 export async function publishInitialPriceVersion(
-  prices: { characterId: string; cost: number }[],
-  options: { adminId: string | null; label?: string; db?: Db; now?: Date },
+  prices: TablePrice[],
+  options: { adminId: string | null; label?: string; notes?: string; db?: Db; now?: Date },
 ) {
   const db = options.db ?? prisma;
   return db.$transaction(async (tx) => {
@@ -390,16 +410,17 @@ export async function publishInitialPriceVersion(
       data: {
         status: "DRAFT",
         label: options.label ?? "Tabela inicial (provisória)",
-        notes: "Preços provisórios por raridade. Não representam balanceamento competitivo validado.",
+        notes: options.notes ?? PROVISIONAL_NOTES,
         createdById: options.adminId,
-        prices: { create: prices.map((p) => ({ characterId: p.characterId, cost: p.cost, isProvisional: true })) },
+        prices: { create: tablePriceRows(prices) },
         changes: {
           create: prices.map((p) => ({
             characterId: p.characterId,
             previousCost: null,
             newCost: p.cost,
+            newOverrides: p.overrides && Object.keys(p.overrides).length ? (p.overrides as Prisma.InputJsonValue) : undefined,
             source: "INITIAL" as const,
-            justification: "Preço inicial provisório",
+            justification: p.justification ?? "Preço inicial provisório",
             adminId: options.adminId,
           })),
         },
@@ -410,12 +431,13 @@ export async function publishInitialPriceVersion(
 }
 
 /**
- * Publica uma nova tabela provisória completa (ex.: mudança de escala do orçamento), preservando
- * as versões anteriores no histórico. Usada pelo seed; exige que não haja rascunho/agendamento aberto.
+ * Publica uma nova tabela completa enquanto a vigente ainda é toda provisória (ex.: mudança de escala do
+ * orçamento ou tabela inicial importada), preservando as versões anteriores no histórico.
+ * Usada pelo seed; exige que não haja rascunho/agendamento aberto.
  */
 export async function publishProvisionalTable(
-  prices: { characterId: string; cost: number }[],
-  options: { adminId: string | null; label: string; justification: string; db?: Db; now?: Date },
+  prices: TablePrice[],
+  options: { adminId: string | null; label: string; justification: string; notes?: string; db?: Db; now?: Date },
 ) {
   const db = options.db ?? prisma;
   return db.$transaction(async (tx) => {
@@ -431,17 +453,18 @@ export async function publishProvisionalTable(
       data: {
         status: "DRAFT",
         label: options.label,
-        notes: "Preços provisórios por raridade. Não representam balanceamento competitivo validado.",
+        notes: options.notes ?? PROVISIONAL_NOTES,
         basedOnId: active?.id ?? null,
         createdById: options.adminId,
-        prices: { create: prices.map((p) => ({ characterId: p.characterId, cost: p.cost, isProvisional: true })) },
+        prices: { create: tablePriceRows(prices) },
         changes: {
           create: prices.map((p) => ({
             characterId: p.characterId,
             previousCost: previous.get(p.characterId) ?? null,
             newCost: p.cost,
+            newOverrides: p.overrides && Object.keys(p.overrides).length ? (p.overrides as Prisma.InputJsonValue) : undefined,
             source: "INITIAL" as const,
-            justification: options.justification,
+            justification: p.justification ?? options.justification,
             adminId: options.adminId,
           })),
         },

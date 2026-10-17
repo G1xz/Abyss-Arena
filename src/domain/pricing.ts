@@ -31,7 +31,7 @@ export function parseOverrides(value: unknown): ConstellationOverrides {
   if (!value || typeof value !== "object") return {};
   const out: ConstellationOverrides = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (/^[1-6]$/.test(k) && typeof v === "number" && Number.isInteger(v) && v > 0) out[k as keyof ConstellationOverrides] = v;
+    if (/^[1-6]$/.test(k) && typeof v === "number" && Number.isInteger(v) && v >= 0) out[k as keyof ConstellationOverrides] = v;
   }
   return out;
 }

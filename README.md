@@ -27,7 +27,7 @@ npm install
 cp .env.example .env            # ajuste ADMIN_EMAIL / ADMIN_PASSWORD
 npm run db:local                # terminal 1: PostgreSQL embutido em localhost:5433 (deixe rodando)
 npm run db:migrate              # terminal 2: aplica as migrations
-npm run db:seed                 # admin, catálogo, tabela v1 provisória, ciclos do Abismo
+npm run db:seed                 # admin, catálogo, tabela de preços inicial (Abyss Cup), ciclos do Abismo
 npm run dev                     # http://localhost:3000
 ```
 
@@ -58,6 +58,7 @@ A aplicação fica em `http://localhost:3000`. Para colocar em produção numa V
 | `npm run catalog:sync` | Sincroniza personagens com a API comunitária |
 | `npm run balance:run [-- --proposals]` | Calcula métricas (e opcionalmente propostas) sem alterar preços |
 | `npm run abyss:sync` | Sincroniza o ciclo vigente e o próximo do Abismo com a wiki |
+| `npm run prices:import` | Leva a tabela da Abyss Cup (×2) ao rascunho de preços; `-- --publish` publica em seguida |
 | `node scripts/brand-assets.mjs` | Gera logo, ícones e imagem de compartilhamento a partir de `assets/brand/logo-original.png` |
 | `npm test` | Testes unitários e de integração (sobe PostgreSQL embutido sozinho) |
 | `npm run test:e2e` | E2E com Playwright (exige `npm run build` antes) |
@@ -96,7 +97,7 @@ deploy/Caddyfile          proxy reverso com HTTPS automático
 
 ## Avisos
 
-- Os custos base iniciais (5★ = 100, 4★ = 40, Viajante = 40 pontos, em C0) são **provisórios** e aparecem marcados assim. Não representam balanceamento competitivo validado. Bancos criados com a escala antiga recebem uma nova versão provisória ao rodar o seed, preservando o histórico.
+- A tabela de preços inicial vem da Abyss Cup (x1 russo): custo por constelação, escalado ×2 para o orçamento de 1000 (`prisma/data/abyss-cup-prices.json`). Personagens fora dela recebem preço provisório (5★ = 100, 4★ = 40), marcado com `*`. Bancos que ainda só têm preços provisórios recebem essa tabela ao rodar o seed; em bancos com preços revisados, use `npm run prices:import`, que leva a tabela ao rascunho para o admin publicar.
 - Constelação e nível dos personagens são **declarados** pelo jogador (importados do HoYoLAB ou editados à mão), sem verificação.
 - O UID do Genshin informado no perfil é exibido como **não verificado**.
 - Links de evidência são apenas informativos e não são verificados automaticamente.

@@ -291,7 +291,7 @@ function PriceDialog({ row, bounds, costRules }: { row: PriceRow; bounds: { min:
   const { pending, run } = useRun();
   const parsedOverrides: ConstellationOverrides = Object.fromEntries(
     Object.entries(overrides)
-      .filter(([, v]) => v.trim() !== "" && Number(v) > 0)
+      .filter(([, v]) => v.trim() !== "" && Number(v) >= 0)
       .map(([k, v]) => [k, Math.round(Number(v))]),
   );
   const curveOnly = constellationTable(cost, row.rarity, null, costRules);

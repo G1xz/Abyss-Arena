@@ -11,11 +11,12 @@ Valores padrão; todos configuráveis em **Admin → Configurações**. Cada sal
 
 ## Personagens e preços
 
-- A tabela de preços vigente define o **custo base (C0)** de cada personagem (padrão entre 10 e 400).
-- **Constelação:** o custo segue uma curva sobre o C0, configurável para 4★ e 5★. O padrão é C1 +15%, C2 +30%, C3 +40%, C4 +50%, C5 +60% e C6 +100%. O admin pode fixar o custo de constelações-chave de um personagem específico (por exemplo, a C2 da Furina).
+- A tabela de preços vigente define o **custo base (C0)** de cada personagem (padrão entre 0 e 400; personagens podem ser **gratuitos**).
+- **Constelação:** o custo segue uma curva sobre o C0, configurável para 4★ e 5★. O padrão é C1 +15%, C2 +30%, C3 +40%, C4 +50%, C5 +60% e C6 +100%. O admin pode fixar o custo de constelações de um personagem específico (por exemplo, a C2 da Furina); o ajuste fixo vale no lugar da curva.
 - **Nível:** nos 4★, não altera o custo. Nos 5★, nível 95 soma +5% e nível 100 soma +10% (configurável).
 - Só entram em partidas personagens **liberados** pela administração **e** com preço na tabela vigente. Personagens novos do catálogo chegam desabilitados.
-- A tabela inicial é **provisória** (C0: 5★ = 100, 4★ = 40, Viajante = 40) e aparece marcada com `*`.
+- A tabela inicial vem da **Abyss Cup** (x1 russo, `prisma/data/abyss-cup-prices.json`): o custo de cada personagem em **cada constelação** (C0 a C6), escalado ×2 porque o orçamento deles é de 500 pontos e o nosso é de 1000. O C0 vira o custo base e C1 a C6 viram ajustes fixos do personagem. Personagens fora dessa tabela recebem um preço provisório (5★ = 100, 4★ = 40), marcado com `*`.
+- O balanceamento automático propõe mudanças no **C0**. Com as constelações fixadas pela tabela, ajustar C1 a C6 continua sendo decisão do admin.
 - Preços mudam apenas por publicação de uma nova versão da tabela, manual ou agendada, sempre por um administrador.
 
 ## Decks
