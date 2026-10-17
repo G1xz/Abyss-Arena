@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Ban, Layers, Scale, Timer } from "lucide-react";
 import { CharacterIcon } from "@/components/character-card";
+import { BrandLogo } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/server/auth/next";
 import { prisma } from "@/server/db";
@@ -28,11 +29,12 @@ export default async function HomePage() {
     <div>
       <section className="mx-auto grid max-w-7xl items-center gap-10 overflow-x-clip px-4 pt-14 pb-16 lg:grid-cols-[1.1fr_0.9fr] lg:pt-20">
         <div>
-          <p className="mb-3 text-xs font-semibold tracking-[0.25em] text-primary uppercase">Draft competitivo · Genshin Impact</p>
-          <h1 className="text-4xl leading-tight font-bold sm:text-5xl">
+          <BrandLogo height={196} eager className="-ml-2 mb-6 w-full max-w-[588px]" />
+          <p className="mb-3 text-xs font-semibold tracking-[0.25em] text-gold uppercase">Draft competitivo · Genshin Impact</p>
+          <h1 className="text-3xl leading-tight font-bold sm:text-4xl">
             Bans, picks e speedrun
             <br />
-            <span className="bg-gradient-to-r from-primary to-[oklch(0.8_0.12_220)] bg-clip-text text-transparent">no Abismo Espiral.</span>
+            <span className="bg-gradient-to-r from-[oklch(0.78_0.13_262)] via-primary to-[oklch(0.74_0.17_305)] bg-clip-text text-transparent">no Abismo Espiral.</span>
           </h1>
           <p className="mt-5 max-w-xl text-base text-muted-foreground">
             Desafie jogadores para um X1, faça o draft em tempo real e registre quem limpou as câmaras mais rápido. A plataforma

@@ -102,7 +102,7 @@ export async function requestPasswordReset(input: unknown, appUrl: string): Prom
   const link = `${appUrl.replace(/\/$/, "")}/reset-password/${token}`;
   await sendMail(
     user.email,
-    "Abyss Arena — redefinição de senha",
+    "Genshin Draft Arena — redefinição de senha",
     `Recebemos um pedido para redefinir sua senha.\n\nAcesse: ${link}\n\nO link expira em 1 hora. Se não foi você, ignore este e-mail.`,
   );
 }

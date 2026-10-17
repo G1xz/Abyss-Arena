@@ -33,7 +33,7 @@ export function MainNav({ loggedIn, isAdmin }: { loggedIn: boolean; isAdmin: boo
             href={l.href}
             className={cn(
               "relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground",
-              isActive(l.href) && "text-foreground after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:bg-primary",
+              isActive(l.href) && "text-foreground after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:bg-gold",
             )}
           >
             <l.icon className="size-4" />

@@ -2,8 +2,8 @@
  * Dados de combate dos inimigos do Abismo.
  * - HP base: HP de mundo aberto da yatta.moe no nível da câmara (HP inicial × curva de crescimento).
  * - O Abismo multiplica esse HP por um fator que nenhuma fonte pública traz (ex.: 4,75 na 12-1 de 2026-10).
- *   O admin informa o multiplicador de cada metade ou o HP exato de um inimigo; sem isso, a tela mostra o
- *   HP de mundo aberto com aviso.
+ *   O admin informa o multiplicador de cada metade ou o HP exato de um inimigo. Sem isso, o HP não é exibido:
+ *   o valor de mundo aberto seria um número errado para o Abismo.
  */
 import type { ElementKey } from "./catalog";
 
@@ -23,13 +23,18 @@ export interface AbyssEnemy {
   mechanics?: string[];
 }
 
-/** abyss = base × multiplicador da metade; manual = informado pelo admin; openWorld = só o HP de mundo aberto. */
-export type HpSource = "abyss" | "manual" | "openWorld";
+/** abyss = HP base × multiplicador da metade; manual = informado pelo admin. */
+export type HpSource = "abyss" | "manual";
 
 export interface ResolvedAbyssEnemy extends AbyssEnemy {
+  /** HP real no Abismo; null enquanto o admin não informar. */
   hp?: number | null;
   hpSource?: HpSource | null;
 }
+
+/** Só conta HP confirmado para o Abismo (dados antigos podem trazer outras origens). */
+export const hasAbyssHp = (e: ResolvedAbyssEnemy): e is ResolvedAbyssEnemy & { hp: number } =>
+  e.hp != null && (e.hpSource === "abyss" || e.hpSource === "manual");
 
 /** HP informado à mão pelo admin, por inimigo: { "<onda>:<nome em inglês>": hp }. */
 export type HpOverrides = Record<string, number>;
@@ -43,21 +48,15 @@ export function resolveEnemyHp(enemies: AbyssEnemy[], hpMultiplier: number | nul
   return enemies.map((e) => {
     const manual = overrides?.[enemyKey(e)];
     if (manual && manual > 0) return { ...e, hp: Math.round(manual), hpSource: "manual" };
-    if (e.baseHp == null) return { ...e, hp: null, hpSource: null };
-    if (hpMultiplier && hpMultiplier > 0) return { ...e, hp: Math.round(e.baseHp * hpMultiplier), hpSource: "abyss" };
-    return { ...e, hp: Math.round(e.baseHp), hpSource: "openWorld" };
+    if (e.baseHp != null && hpMultiplier && hpMultiplier > 0) return { ...e, hp: Math.round(e.baseHp * hpMultiplier), hpSource: "abyss" };
+    return { ...e, hp: null, hpSource: null };
   });
 }
 
-/**
- * HP somado da metade (quantidade × HP). Null quando falta HP ou quantidade de algum inimigo,
- * ou quando há HP do Abismo misturado com HP de mundo aberto (a soma não teria sentido).
- */
-export function totalHp(enemies: ResolvedAbyssEnemy[]): { hp: number; openWorld: boolean } | null {
-  if (!enemies.length || enemies.some((e) => e.hp == null || e.count === null)) return null;
-  const openWorld = enemies.filter((e) => e.hpSource === "openWorld").length;
-  if (openWorld && openWorld !== enemies.length) return null;
-  return { hp: enemies.reduce((sum, e) => sum + e.hp! * (e.count ?? 1), 0), openWorld: openWorld > 0 };
+/** HP somado da metade (quantidade × HP). Null quando falta o HP ou a quantidade de algum inimigo. */
+export function totalHp(enemies: ResolvedAbyssEnemy[]): number | null {
+  if (!enemies.length || enemies.some((e) => !hasAbyssHp(e) || e.count === null)) return null;
+  return enemies.reduce((sum, e) => sum + e.hp! * (e.count ?? 1), 0);
 }
 
 // ── Leitura dos dados da yatta.moe ─────────────────────────────────────

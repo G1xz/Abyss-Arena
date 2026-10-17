@@ -25,7 +25,7 @@ async function main() {
   const stopJobs = process.env.JOBS_ENABLED === "false" ? () => {} : startJobScheduler();
 
   httpServer.listen(port, hostname, () => {
-    console.log(`> Abyss Arena em http://localhost:${port} (${dev ? "desenvolvimento" : "produção"})`);
+    console.log(`> Genshin Draft Arena em http://localhost:${port} (${dev ? "desenvolvimento" : "produção"})`);
   });
 
   const shutdown = (signal: string) => {

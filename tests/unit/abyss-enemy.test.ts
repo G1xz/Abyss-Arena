@@ -51,31 +51,40 @@ describe("HP dos inimigos do Abismo", () => {
       [1_078_931, "abyss"],
       [863_145, "abyss"],
     ]);
-    expect(totalHp(resolved)).toEqual({ hp: 4_099_937, openWorld: false });
+    expect(totalHp(resolved)).toBe(4_099_937);
   });
 
-  it("sem multiplicador mostra o HP de mundo aberto; HP manual tem prioridade", () => {
+  it("sem multiplicador nem HP manual, não há HP (o de mundo aberto seria errado); HP manual tem prioridade", () => {
     const archer: AbyssEnemy = { name: "Arqueiro", nameEn: "Battle-Hardened Chimeric Volkodlak Archer", count: 1, wave: 1, image: null, baseHp: null };
-    const open = resolveEnemyHp([...lowerHalf, archer], null, null);
-    expect(open.map((e) => e.hpSource)).toEqual(["openWorld", "openWorld", "openWorld", null]);
-    expect(open[3]!.hp).toBeNull();
-    expect(totalHp(open)).toBeNull();
-    expect(totalHp(open.slice(0, 3))).toEqual({ hp: 454_287 + 227_143 + 181_715, openWorld: true });
+    const none = resolveEnemyHp([...lowerHalf, archer], null, null);
+    expect(none.map((e) => [e.hp, e.hpSource])).toEqual([
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+    ]);
+    expect(totalHp(none)).toBeNull();
 
     const manual = resolveEnemyHp([archer, lowerHalf[0]!], null, { [enemyKey(archer)]: 5_535_346 });
     expect(manual.map((e) => [e.hp, e.hpSource])).toEqual([
       [5_535_346, "manual"],
-      [454_287, "openWorld"],
+      [null, null],
     ]);
-    // HP do Abismo misturado com mundo aberto não soma.
+    // Total só com o HP de todos os inimigos da metade.
     expect(totalHp(manual)).toBeNull();
-    expect(totalHp(resolveEnemyHp([archer, lowerHalf[0]!], 4.75, { [enemyKey(archer)]: 5_535_346 }))).toEqual({ hp: 5_535_346 + 2_157_861, openWorld: false });
+    expect(totalHp(resolveEnemyHp([archer, lowerHalf[0]!], 4.75, { [enemyKey(archer)]: 5_535_346 }))).toBe(5_535_346 + 2_157_861);
+    // HP manual vale mesmo com multiplicador na metade.
+    expect(resolveEnemyHp([lowerHalf[0]!], 4.75, { [enemyKey(lowerHalf[0]!)]: 2_000_000 })[0]).toMatchObject({ hp: 2_000_000, hpSource: "manual" });
   });
 
   it("quantidade multiplica no total; quantidade desconhecida não soma", () => {
     const two = resolveEnemyHp([{ ...lowerHalf[1]!, count: 2 }], 4.75, null);
-    expect(totalHp(two)).toEqual({ hp: 2 * 1_078_931, openWorld: false });
+    expect(totalHp(two)).toBe(2 * 1_078_931);
     expect(totalHp(resolveEnemyHp([{ ...lowerHalf[1]!, count: null }], 4.75, null))).toBeNull();
+  });
+
+  it("snapshots antigos com HP de mundo aberto não contam como HP do Abismo", () => {
+    expect(totalHp([{ ...lowerHalf[0]!, hp: 454_287, hpSource: "openWorld" as never }])).toBeNull();
   });
 
   it("resistências em % e destaque só do que foge dos 10%", () => {

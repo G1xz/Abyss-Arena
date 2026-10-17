@@ -1,4 +1,6 @@
-# Abyss Arena
+<p align="center"><img src="src/assets/brand/logo.webp" alt="Genshin Draft Arena" width="560"></p>
+
+# Genshin Draft Arena
 
 Plataforma competitiva de **draft de Genshin Impact**: importe os personagens da sua conta (com constelação e nível), monte decks com orçamento de 1000 pontos, desafie jogadores pelo nickname, faça bans e picks em tempo real, dispute speedruns do Abismo Espiral com confirmação bilateral de tempos e acompanhe ranking, estatísticas e o **balanceamento orgânico supervisionado** de preços.
 
@@ -56,6 +58,7 @@ A aplicação fica em `http://localhost:3000`. Para colocar em produção numa V
 | `npm run catalog:sync` | Sincroniza personagens com a API comunitária |
 | `npm run balance:run [-- --proposals]` | Calcula métricas (e opcionalmente propostas) sem alterar preços |
 | `npm run abyss:sync` | Sincroniza o ciclo vigente e o próximo do Abismo com a wiki |
+| `node scripts/brand-assets.mjs` | Gera logo, ícones e imagem de compartilhamento a partir de `assets/brand/logo-original.png` |
 | `npm test` | Testes unitários e de integração (sobe PostgreSQL embutido sozinho) |
 | `npm run test:e2e` | E2E com Playwright (exige `npm run build` antes) |
 | `npm run typecheck` | TypeScript sem emitir arquivos |

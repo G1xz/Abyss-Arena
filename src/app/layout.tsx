@@ -1,19 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Chakra_Petch, Inter } from "next/font/google";
+import { Cinzel, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { getCurrentUser } from "@/server/auth/next";
 import "./globals.css";
 
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
-const heading = Chakra_Petch({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-heading" });
+// Serifada clássica, no estilo do "DRAFT ARENA" da logo.
+const heading = Cinzel({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-heading" });
 
 export const metadata: Metadata = {
-  title: { default: "Abyss Arena — Draft competitivo de Genshin Impact", template: "%s · Abyss Arena" },
+  metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
+  applicationName: "Genshin Draft Arena",
+  title: { default: "Genshin Draft Arena — Draft competitivo de Genshin Impact", template: "%s · Genshin Draft Arena" },
   description: "Monte decks com orçamento de pontos, faça bans e picks em tempo real e dispute speedruns do Abismo Espiral.",
 };
 
-export const viewport: Viewport = { themeColor: "#12151f", colorScheme: "dark" };
+export const viewport: Viewport = { themeColor: "#0a0f2c", colorScheme: "dark" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();

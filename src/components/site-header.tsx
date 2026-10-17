@@ -1,27 +1,43 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Orbit } from "lucide-react";
+import logo from "@/assets/brand/logo.webp";
+import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/server/auth/session";
 import { InviteInbox } from "./invite-inbox";
 import { MainNav, UserMenu } from "./nav-client";
 import { Button } from "./ui/button";
 
+export const BRAND = "Genshin Draft Arena";
+
+/** Logo da marca. `height` em px; a largura acompanha a proporção da imagem (3:1). */
+export function BrandLogo({ height, className, eager }: { height: number; className?: string; eager?: boolean }) {
+  const width = Math.round((height * logo.width) / logo.height);
+  return (
+    <Image
+      src={logo}
+      alt={BRAND}
+      width={width}
+      height={height}
+      sizes={`${width}px`}
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : undefined}
+      className={cn("h-auto max-w-full drop-shadow-[0_6px_24px_oklch(0.45_0.2_285/0.35)]", className)}
+    />
+  );
+}
+
 export function Logo() {
   return (
-    <Link href="/" className="flex shrink-0 items-center gap-2.5 font-display text-lg font-bold tracking-wide">
-      <span className="grid size-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-[oklch(0.55_0.17_250)] text-white shadow-[0_0_20px_-6px_var(--primary)]">
-        <Orbit className="size-[18px]" strokeWidth={2.4} />
-      </span>
-      <span className="hidden sm:inline">
-        Abyss<span className="text-primary">Arena</span>
-      </span>
+    <Link href="/" className="flex shrink-0 items-center" aria-label={`${BRAND}, página inicial`}>
+      <BrandLogo height={52} eager className="h-9 w-auto sm:h-[52px]" />
     </Link>
   );
 }
 
 export function SiteHeader({ user }: { user: SessionUser | null }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4">
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-6">
         <Logo />
         <MainNav loggedIn={Boolean(user)} isAdmin={user?.role === "ADMIN"} />
         <div className="ml-auto flex items-center gap-1.5">
@@ -42,16 +58,21 @@ export function SiteHeader({ user }: { user: SessionUser | null }) {
           )}
         </div>
       </div>
+      <div className="gold-rule h-px" aria-hidden />
     </header>
   );
 }
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t border-border/60">
-      <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>Projeto de fãs, sem afiliação com a HoYoverse. As partidas acontecem dentro do Genshin Impact.</p>
-        <p>Dados de personagens: Project Amber (gi.yatta.moe)</p>
+    <footer className="mt-20">
+      <div className="gold-rule h-px" aria-hidden />
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:justify-between">
+        <BrandLogo height={36} className="opacity-90" />
+        <div className="grid gap-1 text-center sm:text-right">
+          <p>Projeto de fãs, sem afiliação com a HoYoverse. As partidas acontecem dentro do Genshin Impact.</p>
+          <p>Dados de personagens e inimigos: Project Amber (gi.yatta.moe) · Ciclos do Abismo: Genshin Impact Wiki (Fandom)</p>
+        </div>
       </div>
     </footer>
   );
