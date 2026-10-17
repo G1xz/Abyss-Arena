@@ -125,6 +125,13 @@ export async function saveCompetitiveSettingsAction(input: {
   picksPerPlayer: number;
   draftPreset: string;
   customSequence: string;
+  immunityEnabled: boolean;
+  /** Picks individuais em que os imunes podem ser escolhidos, ex.: "4, 8". */
+  immunityPickSlots: string;
+  immunityMinEligible: number;
+  /** Relógio de cada jogador em segundos; 0 = sem relógio. */
+  clockSeconds: number;
+  undoPerPlayer: number;
   tiePolicy: "DRAW" | "FIRST_SUBMITTED_WINS";
   minResultSeconds: number;
   maxResultSeconds: number;
@@ -152,7 +159,21 @@ export async function saveCompetitiveSettingsAction(input: {
       constellationCurve: { fourStar: input.curveFourStar, fiveStar: input.curveFiveStar },
       levelBonus: { level95: input.level95Bonus, level100: input.level100Bonus },
       draftPreset: input.draftPreset,
-      draft: { bansPerPlayer: input.bansPerPlayer, picksPerPlayer: input.picksPerPlayer, sequence, turnTimeoutSeconds: null },
+      draft: {
+        bansPerPlayer: input.bansPerPlayer,
+        picksPerPlayer: input.picksPerPlayer,
+        sequence,
+        immunity: {
+          enabled: input.immunityEnabled,
+          pickSlots: input.immunityPickSlots
+            .split(/[\s,;]+/)
+            .filter(Boolean)
+            .map(Number),
+          minEligible: input.immunityMinEligible,
+        },
+        clockSeconds: input.clockSeconds > 0 ? input.clockSeconds : null,
+        undoPerPlayer: input.undoPerPlayer,
+      },
       tiePolicy: input.tiePolicy,
       minResultSeconds: input.minResultSeconds,
       maxResultSeconds: input.maxResultSeconds,

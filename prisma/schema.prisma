@@ -372,6 +372,8 @@ model Match {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   draftStartedAt DateTime?
+  /// Início do turno atual do draft (o relógio do jogador da vez corre desde aqui).
+  turnStartedAt  DateTime?
   lockedAt       DateTime?
   completedAt    DateTime?
   cancelledAt    DateTime?
@@ -402,6 +404,10 @@ model MatchPlayer {
   outcome    MatchOutcome?
   joinedAt   DateTime      @default(now())
   lastSeenAt DateTime?
+  /// Tempo de relógio já gasto no draft (ms); o restante é config.draft.clockSeconds menos isto.
+  clockUsedMs Int          @default(0)
+  /// Quantos "desfazer" o jogador já usou nesta partida.
+  undosUsed   Int          @default(0)
 
   @@unique([matchId, seat])
   @@unique([matchId, userId])
@@ -449,8 +455,12 @@ model MatchDeckSnapshotEntry {
 }
 
 enum DraftActionType {
+  /// Declaração de imune (fase de imunidade).
+  IMMUNE
   BAN
   PICK
+  /// Turno passado por falta de opções válidas (sem personagem).
+  SKIP
 }
 
 model DraftAction {
@@ -460,10 +470,10 @@ model DraftAction {
   stepIndex   Int
   type        DraftActionType
   actorSeat   Seat
-  /// Deck afetado: BAN atinge o deck do oponente; PICK sai do próprio deck.
+  /// Deck alvo: BAN aponta o deck do oponente (o efeito é universal); IMMUNE, PICK e SKIP, o próprio.
   targetSeat  Seat
-  characterId String
-  character   Character       @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  characterId String?
+  character   Character?      @relation(fields: [characterId], references: [id], onDelete: Restrict)
   actorUserId String
   actorUser   User            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
   createdAt   DateTime        @default(now())

@@ -55,7 +55,8 @@ Os serviços recebem o usuário (`SessionUser`) explicitamente e checam permiss�
 ## Concorrência e integridade
 
 - Toda mutação de partida roda numa transação que começa com `SELECT ... FOR UPDATE` na linha da partida, o que serializa ações concorrentes.
-- O motor de draft valida participante, turno, passo esperado (`stepIndex`: rejeita ações atrasadas e duplicadas), propriedade do personagem e disponibilidade.
+- O motor de draft (`domain/draft.ts`) valida participante, turno, passo esperado (`stepIndex`: rejeita ações atrasadas e duplicadas), propriedade do personagem e disponibilidade. Regras: imunidade condicional (calculada dos snapshots: mesmo personagem e constelação nos dois decks), bans universais, picks exclusivos, imunes só nas janelas configuradas e passe (`SKIP`) apenas sem opções. O estado vem todo das ações gravadas; o desfazer apaga a última ação e conta em `MatchPlayer.undosUsed`.
+- Relógio de xadrez: `Match.turnStartedAt` marca o início do turno, e cada ação (ou desfazer) debita o tempo de quem estava com a vez em `MatchPlayer.clockUsedMs`. O cliente calcula a contagem a partir do horário do servidor enviado na visão da partida.
 - Segunda barreira no banco: `DraftAction @@unique([matchId, stepIndex])` e `@@unique([matchId, type, targetSeat, characterId])`.
 - `CHECK (cost > 0)` e `CHECK (timeMs > 0)`; pontos sempre inteiros.
 - O teste `concorrência: ações simultâneas no mesmo turno…` dispara 4 ações paralelas e verifica que só uma é gravada.
@@ -86,7 +87,8 @@ Detalhes em [`prisma/schema.prisma`](../prisma/schema.prisma).
 
 ## Pontos de extensão previstos
 
-- **Timer por turno**: `DraftConfig.turnTimeoutSeconds` já existe na configuração congelada. Basta um job que aplique a ação padrão ao expirar.
+- **Penalidade de tempo negativo**: o relógio já guarda o tempo gasto por jogador (`clockUsedMs`); falta só a regra da penalidade.
+- **Fase de armas e organização de times**: entram como novos passos depois dos picks, antes de `LOCKED`, quando a tabela de custo das armas e a duração da janela estiverem definidas.
 - **ELO/MMR**: `User.rating` está reservado. O ranking atual usa vitórias, taxa e derrotas.
 - **Drafts intercalados**: a sequência é declarativa (`BAN_PLAYER_A, PICK_PLAYER_B, ...`), e o preset `INTERLEAVED` já existe.
 - **Escala horizontal**: troque o rate limit e a presença em memória por Redis e use `@socket.io/redis-adapter`. Defina `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.

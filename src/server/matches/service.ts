@@ -1,7 +1,18 @@
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { evaluateDeck } from "@/domain/deck";
-import { validateDraftAction, type DraftActionRecord, type DraftDecks } from "@/domain/draft";
+import {
+  canUndo,
+  computeDraftState,
+  immunityEligible,
+  effectiveSequence,
+  opponentOf,
+  validateDraftAction,
+  type DraftActionRecord,
+  type DraftCopies,
+  type DraftDecks,
+  type DraftStep,
+} from "@/domain/draft";
 import { Prisma, type Seat } from "@/generated/prisma/client";
 import { getCurrentCycle, toRulesSnapshot } from "../abyss/service";
 import type { SessionUser } from "../auth/session";
@@ -127,6 +138,8 @@ export async function joinMatchTx(tx: Tx, user: SessionUser, matchId: string) {
     if ((await countActiveMatches(tx, user.id)) >= MAX_ACTIVE_MATCHES_PER_USER) {
       throw new AppError("CONFLICT", `Você já tem ${MAX_ACTIVE_MATCHES_PER_USER} partidas em andamento.`);
     }
+    // O anfitrião pode ter trocado de lado antes de o convidado anterior sair: ocupa o assento livre.
+    const seat: Seat = match.players.some((p) => p.seat === "B") ? "A" : "B";
 
     // Seleciona automaticamente o deck padrão, se for válido para esta partida.
     let deckId: string | null = null;
@@ -135,7 +148,7 @@ export async function joinMatchTx(tx: Tx, user: SessionUser, matchId: string) {
       const { evaluation } = await evaluateSeatDeck(tx, user.id, profile.defaultDeckId, readConfig(match));
       if (evaluation.valid) deckId = profile.defaultDeckId;
     }
-    await tx.matchPlayer.create({ data: { matchId: match.id, userId: user.id, seat: "B", deckId } });
+    await tx.matchPlayer.create({ data: { matchId: match.id, userId: user.id, seat, deckId } });
     await bumpMatch(tx, match.id);
     await recordEvent(tx, match.id, "PLAYER_JOINED", user.id);
     return match;
@@ -166,13 +179,13 @@ export async function leaveRoom(user: SessionUser, matchId: string, db: Db = pri
     const match = await loadLockedMatch(tx, matchId);
     const seat = requireSeat(match, user.id);
     requireStatus(match, OPEN_STATUSES, "Não é possível sair depois que o draft começou");
-    if (seat === "A") {
+    if (match.hostId === user.id) {
       await bumpMatch(tx, matchId, { status: "CANCELLED", cancelledAt: new Date(), cancelReason: "O anfitrião saiu da sala" });
       await recordEvent(tx, matchId, "ROOM_CANCELLED", user.id, { reason: "host_left" });
       return cancelPendingInvites(tx, matchId);
     }
-    await tx.matchPlayer.delete({ where: { matchId_seat: { matchId, seat: "B" } } });
-    await tx.matchPlayer.update({ where: { matchId_seat: { matchId, seat: "A" } }, data: { isReady: false } });
+    await tx.matchPlayer.delete({ where: { matchId_seat: { matchId, seat } } });
+    await tx.matchPlayer.updateMany({ where: { matchId }, data: { isReady: false } });
     await bumpMatch(tx, matchId, { status: "WAITING" });
     await recordEvent(tx, matchId, "PLAYER_LEFT", user.id);
     return [];
@@ -227,6 +240,38 @@ export async function setReady(user: SessionUser, matchId: string, ready: boolea
   notifyMatchChanged(matchId);
 }
 
+/**
+ * Troca quem é o jogador A e quem é o B (definido por acordo, sem sorteio nem prioridade do anfitrião).
+ * A prontidão dos dois é desfeita: confirmar de novo é o aceite do novo lado.
+ */
+export async function swapSeats(user: SessionUser, matchId: string, db: Db = prisma) {
+  await db.$transaction(async (tx) => {
+    const match = await loadLockedMatch(tx, matchId);
+    requireSeat(match, user.id);
+    requireStatus(match, OPEN_STATUSES, "Os lados só podem ser trocados antes do draft");
+    if (match.players.length !== 2) throw new AppError("INVALID_STATE", "Os lados são trocados com os dois jogadores na sala");
+    // O índice único (matchId, seat) não permite trocar no lugar: recria os dois assentos.
+    await tx.matchPlayer.deleteMany({ where: { matchId } });
+    for (const p of match.players) {
+      await tx.matchPlayer.create({
+        data: { matchId, userId: p.userId, seat: opponentOf(p.seat), deckId: p.deckId, isReady: false, joinedAt: p.joinedAt, lastSeenAt: p.lastSeenAt },
+      });
+    }
+    await bumpMatch(tx, matchId, { status: "WAITING" });
+    await recordEvent(tx, matchId, "SEATS_SWAPPED", user.id);
+  });
+  notifyMatchChanged(matchId);
+}
+
+const statusFor = (step: DraftStep | undefined) => (!step ? "LOCKED" : step.type === "PICK" ? "PICKING" : "BANNING");
+
+/** Debita do relógio de `seat` o tempo desde o início do turno atual. */
+async function chargeClock(tx: Tx, match: { id: string; turnStartedAt: Date | null }, seat: Seat, now: Date) {
+  if (!match.turnStartedAt) return;
+  const elapsed = Math.max(0, now.getTime() - match.turnStartedAt.getTime());
+  await tx.matchPlayer.update({ where: { matchId_seat: { matchId: match.id, seat } }, data: { clockUsedMs: { increment: elapsed } } });
+}
+
 /** Anfitrião inicia o draft: fixa a tabela vigente e congela os decks em snapshots imutáveis. */
 export async function startDraft(user: SessionUser, matchId: string, db: Db = prisma) {
   await db.$transaction(async (tx) => {
@@ -240,12 +285,16 @@ export async function startDraft(user: SessionUser, matchId: string, db: Db = pr
     const version = await getActivePriceVersion(tx);
     if (!version) throw new AppError("UNAVAILABLE", "Nenhuma tabela de preços publicada");
 
+    const decks: DraftDecks = { A: [], B: [] };
+    const copies: DraftCopies = { A: {}, B: {} };
     for (const player of match.players) {
       const { deck, costs, evaluation } = await evaluateSeatDeck(tx, player.userId, player.deckId!, config, version.id);
       if (!evaluation.valid) {
         throw new AppError("DECK_INVALID", `O deck do jogador ${player.seat} ficou inválido: ${evaluation.issues[0]!.message}`);
       }
       const characters = await tx.character.findMany({ where: { id: { in: deck.characters.map((c) => c.characterId) } } });
+      decks[player.seat] = characters.map((c) => c.id);
+      copies[player.seat] = Object.fromEntries(characters.map((c) => [c.id, costs.details.get(c.id)!.constellation]));
       await tx.matchDeckSnapshot.create({
         data: {
           matchId,
@@ -272,14 +321,17 @@ export async function startDraft(user: SessionUser, matchId: string, db: Db = pr
         },
       });
     }
-    const first = config.draft.sequence[0]!;
+    const eligible = immunityEligible(decks, copies);
+    const { sequence, immunityActive } = effectiveSequence(config.draft, eligible);
+    const now = new Date();
     await bumpMatch(tx, matchId, {
-      status: first.type === "BAN" ? "BANNING" : "PICKING",
+      status: statusFor(sequence[0]),
       currentStep: 0,
-      draftStartedAt: new Date(),
+      draftStartedAt: now,
+      turnStartedAt: now,
       priceVersion: { connect: { id: version.id } },
     });
-    await recordEvent(tx, matchId, "DRAFT_STARTED", user.id, { priceVersion: version.number });
+    await recordEvent(tx, matchId, "DRAFT_STARTED", user.id, { priceVersion: version.number, immunity: immunityActive, eligible: eligible.length });
   });
   notifyMatchChanged(matchId);
 }
@@ -289,7 +341,11 @@ export async function loadDraftContext(tx: Tx, matchId: string) {
   const snapshots = await tx.matchDeckSnapshot.findMany({ where: { matchId }, include: { entries: true } });
   const actions = await tx.draftAction.findMany({ where: { matchId }, orderBy: { stepIndex: "asc" } });
   const decks: DraftDecks = { A: [], B: [] };
-  for (const snapshot of snapshots) decks[snapshot.seat] = snapshot.entries.map((e) => e.characterId);
+  const copies: DraftCopies = { A: {}, B: {} };
+  for (const snapshot of snapshots) {
+    decks[snapshot.seat] = snapshot.entries.map((e) => e.characterId);
+    copies[snapshot.seat] = Object.fromEntries(snapshot.entries.map((e) => [e.characterId, e.constellation]));
+  }
   const records: DraftActionRecord[] = actions.map((a) => ({
     stepIndex: a.stepIndex,
     type: a.type,
@@ -297,17 +353,30 @@ export async function loadDraftContext(tx: Tx, matchId: string) {
     targetSeat: a.targetSeat,
     characterId: a.characterId,
   }));
-  return { snapshots, decks, actions: records };
+  return { snapshots, decks, copies, actions: records };
 }
 
 export const draftActionSchema = z.object({
   stepIndex: z.number().int().min(0).max(100),
-  characterId: idSchema,
+  /** Null = passar a vez (só aceito quando não há nenhuma opção válida). */
+  characterId: idSchema.nullable(),
 });
 
+const EVENT_BY_TYPE = { IMMUNE: "DRAFT_IMMUNE", BAN: "DRAFT_BAN", PICK: "DRAFT_PICK", SKIP: "DRAFT_SKIP" } as const;
+
+function characterName(snapshots: Awaited<ReturnType<typeof loadDraftContext>>["snapshots"], characterId: string | null) {
+  if (!characterId) return undefined;
+  for (const s of snapshots) {
+    const entry = s.entries.find((e) => e.characterId === characterId);
+    if (entry) return entry.name;
+  }
+  return undefined;
+}
+
 /**
- * Aplica um ban/pick de forma atômica. O lock da linha da partida serializa ações concorrentes;
- * a chave única (matchId, stepIndex) é a segunda barreira contra escolhas simultâneas.
+ * Aplica uma imunidade, ban, pick ou passe de forma atômica. O lock da linha da partida serializa ações
+ * concorrentes; a chave única (matchId, stepIndex) é a segunda barreira contra escolhas simultâneas.
+ * O tempo do turno é debitado do relógio de quem agiu.
  */
 export async function performDraftAction(user: SessionUser, matchId: string, input: unknown, db: Db = prisma) {
   const data = parseInput(draftActionSchema, input);
@@ -319,11 +388,13 @@ export async function performDraftAction(user: SessionUser, matchId: string, inp
       requireStatus(match, DRAFT_STATUSES, "O draft não está em andamento");
       const config = readConfig(match);
       const ctx = await loadDraftContext(tx, matchId);
-      const result = validateDraftAction(config.draft, ctx.decks, ctx.actions, {
-        actorSeat: seat,
-        stepIndex: data.stepIndex,
-        characterId: data.characterId,
-      });
+      const result = validateDraftAction(
+        config.draft,
+        ctx.decks,
+        ctx.actions,
+        { actorSeat: seat, stepIndex: data.stepIndex, characterId: data.characterId },
+        ctx.copies,
+      );
       if (!result.ok) {
         throw new AppError(result.code === "DRAFT_COMPLETE" ? "INVALID_STATE" : result.code, result.message);
       }
@@ -331,26 +402,27 @@ export async function performDraftAction(user: SessionUser, matchId: string, inp
         data: {
           matchId,
           stepIndex: data.stepIndex,
-          type: result.step.type,
+          type: result.type,
           actorSeat: seat,
           targetSeat: result.targetSeat,
           characterId: data.characterId,
           actorUserId: user.id,
         },
       });
-      const nextIndex = data.stepIndex + 1;
-      const next = config.draft.sequence[nextIndex];
+      const now = new Date();
+      await chargeClock(tx, match, seat, now);
+      const next = result.state.sequence[data.stepIndex + 1];
       await bumpMatch(tx, matchId, {
-        currentStep: nextIndex,
-        status: next ? (next.type === "BAN" ? "BANNING" : "PICKING") : "LOCKED",
-        ...(next ? {} : { lockedAt: new Date() }),
+        currentStep: data.stepIndex + 1,
+        status: statusFor(next),
+        turnStartedAt: next ? now : null,
+        ...(next ? {} : { lockedAt: now }),
       });
-      const entry = ctx.snapshots.find((s) => s.seat === result.targetSeat)?.entries.find((e) => e.characterId === data.characterId);
-      await recordEvent(tx, matchId, result.step.type === "BAN" ? "DRAFT_BAN" : "DRAFT_PICK", user.id, {
+      await recordEvent(tx, matchId, EVENT_BY_TYPE[result.type], user.id, {
         seat,
         stepIndex: data.stepIndex,
         characterId: data.characterId,
-        characterName: entry?.name,
+        characterName: characterName(ctx.snapshots, data.characterId),
       });
       if (!next) await recordEvent(tx, matchId, "DRAFT_LOCKED", null);
     });
@@ -360,6 +432,45 @@ export async function performDraftAction(user: SessionUser, matchId: string, inp
     }
     throw err;
   }
+  notifyMatchChanged(matchId);
+}
+
+/**
+ * Desfazer (1 por jogador, configurável): remove o último pick confirmado do jogador, desde que ainda seja
+ * a última ação do draft. É público: o personagem volta a ficar disponível e o turno volta para quem desfez.
+ * Também vale logo após o último pick, enquanto ninguém enviou resultado.
+ */
+export async function undoDraftPick(user: SessionUser, matchId: string, db: Db = prisma) {
+  enforceRateLimit("matchAction", user.id);
+  await db.$transaction(async (tx) => {
+    const match = await loadLockedMatch(tx, matchId);
+    const seat = requireSeat(match, user.id);
+    requireStatus(match, [...DRAFT_STATUSES, "LOCKED"], "Não é mais possível desfazer");
+    const config = readConfig(match);
+    const player = match.players.find((p) => p.seat === seat)!;
+    const ctx = await loadDraftContext(tx, matchId);
+    if (!canUndo(config.draft, ctx.actions, seat, player.undosUsed)) {
+      const left = (config.draft.undoPerPlayer ?? 0) - player.undosUsed;
+      throw new AppError(
+        "INVALID_STATE",
+        left <= 0 ? "Você não tem mais desfazer nesta partida" : "Só dá para desfazer o seu último pick enquanto ele for a última ação do draft",
+      );
+    }
+    const last = ctx.actions[ctx.actions.length - 1]!;
+    const now = new Date();
+    // Quem estava com a vez para de gastar tempo; o turno volta para quem desfez.
+    const state = computeDraftState(config.draft, ctx.decks, ctx.actions, ctx.copies);
+    if (state.currentStep) await chargeClock(tx, match, state.currentStep.actor, now);
+    await tx.draftAction.delete({ where: { matchId_stepIndex: { matchId, stepIndex: last.stepIndex } } });
+    await tx.matchPlayer.update({ where: { id: player.id }, data: { undosUsed: { increment: 1 } } });
+    await bumpMatch(tx, matchId, { currentStep: last.stepIndex, status: "PICKING", turnStartedAt: now, lockedAt: null });
+    await recordEvent(tx, matchId, "DRAFT_UNDO", user.id, {
+      seat,
+      stepIndex: last.stepIndex,
+      characterId: last.characterId,
+      characterName: characterName(ctx.snapshots, last.characterId),
+    });
+  });
   notifyMatchChanged(matchId);
 }
 

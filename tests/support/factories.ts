@@ -100,21 +100,24 @@ export async function giveRoster(user: SessionUser, characterIds: string[], opti
   }
 }
 
-/** Deck válido com 10 personagens (4× 5★ + 6× 4★ = 640 pontos em C0), já na conta do jogador. */
+/** Deck válido com 11 personagens (4× 5★ + 7× 4★ = 680 pontos em C0), já na conta do jogador. */
 export async function createValidDeck(user: SessionUser, world: Awaited<ReturnType<typeof seedWorld>>, offset = 0) {
-  const ids = [...world.fiveStars.slice(offset, offset + 4), ...world.fourStars.slice(offset, offset + 6)].map((c) => c.id);
+  const ids = [...world.fiveStars.slice(offset, offset + 4), ...world.fourStars.slice(offset, offset + 7)].map((c) => c.id);
   const missing = [];
   for (const id of ids) if (!(await prisma.ownedCharacter.findUnique({ where: { userId_characterId: { userId: user.id, characterId: id } } }))) missing.push(id);
   await giveRoster(user, missing);
   return createDeck(user, { name: `Deck ${user.nickname}`, characterIds: ids });
 }
 
-/** Sala com os dois jogadores prontos e draft iniciado. */
+/**
+ * Sala com os dois jogadores prontos e draft iniciado. Os decks têm exatamente 2 personagens em comum
+ * (mesma constelação): há fase de imunidade, e os demais personagens não se sobrepõem.
+ */
 export async function startedMatch(world: Awaited<ReturnType<typeof seedWorld>>) {
   const a = await createUser();
   const b = await createUser();
   const deckA = await createValidDeck(a, world, 0);
-  const deckB = await createValidDeck(b, world, 1);
+  const deckB = await createValidDeck(b, world, 5);
   const room = await createRoom(a, { deckId: deckA.id });
   await joinRoom(b, room.code);
   await prisma.matchPlayer.update({ where: { matchId_seat: { matchId: room.id, seat: "B" } }, data: { deckId: deckB.id } });
@@ -124,19 +127,19 @@ export async function startedMatch(world: Awaited<ReturnType<typeof seedWorld>>)
   return { a, b, deckA, deckB, matchId: room.id, code: room.code };
 }
 
-/** Executa o draft inteiro escolhendo sempre o primeiro personagem disponível. */
+/**
+ * Executa o draft inteiro: sempre a primeira opção válida, preferindo o imune quando a janela abre
+ * (assim os personagens comuns bastam para os outros picks). Sem opções, passa a vez.
+ */
 export async function completeDraft(matchId: string, a: SessionUser, b: SessionUser) {
   for (;;) {
     const view = await getMatchView(matchId, a);
     const d = view.draft!;
     if (d.isComplete) return view;
-    const step = d.currentStep!;
-    const actor = step.actor === "A" ? a : b;
-    const own = step.actor;
-    const opp = own === "A" ? "B" : "A";
-    const target = step.type === "BAN" ? opp : own;
-    const candidate = d.decks[target].find((c) => !d.bannedFrom[target].includes(c.characterId) && !d.picks[target].includes(c.characterId))!;
-    await performDraftAction(actor, matchId, { stepIndex: d.stepIndex, characterId: candidate.characterId });
+    const actor = d.currentStep!.actor === "A" ? a : b;
+    const immune = [d.immune.A, d.immune.B];
+    const choice = d.options.find((id) => immune.includes(id)) ?? d.options[0] ?? null;
+    await performDraftAction(actor, matchId, { stepIndex: d.stepIndex, characterId: choice });
   }
 }
 

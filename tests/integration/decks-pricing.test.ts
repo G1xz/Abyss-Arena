@@ -23,7 +23,7 @@ describe("decks", () => {
     const deck = await createValidDeck(user, world);
     const [listed] = await listUserDecks(user.id);
     expect(listed!.id).toBe(deck.id);
-    expect(listed!.evaluation).toMatchObject({ valid: true, totalCost: 640, remaining: 360, size: 10, minSize: 10 });
+    expect(listed!.evaluation).toMatchObject({ valid: true, totalCost: 680, remaining: 320, size: 11, minSize: 11 });
     expect(listed!.isDefault).toBe(true); // primeiro deck vira padrão
   });
 
@@ -31,15 +31,15 @@ describe("decks", () => {
     const user = await createUser();
     const [five1, five2] = world.fiveStars;
     const [four1] = world.fourStars;
-    const rest = [...world.fiveStars.slice(2, 4), ...world.fourStars.slice(1, 6)].map((c) => c.id);
+    const rest = [...world.fiveStars.slice(2, 4), ...world.fourStars.slice(1, 7)].map((c) => c.id);
     await giveRoster(user, rest);
     await giveRoster(user, [five1!.id], { constellation: 2, level: 90 }); // 100 × 1,30 = 130
     await giveRoster(user, [five2!.id], { constellation: 0, level: 100 }); // 100 × 1,10 = 110
     await giveRoster(user, [four1!.id], { constellation: 6, level: 100 }); // 40 × 2 = 80 (nível não conta em 4★)
     await createDeck(user, { name: "Constelações", characterIds: [five1!.id, five2!.id, four1!.id, ...rest] });
     const [listed] = await listUserDecks(user.id);
-    // 130 + 110 + 80 + 2×100 + 5×40
-    expect(listed!.evaluation.totalCost).toBe(130 + 110 + 80 + 200 + 200);
+    // 130 + 110 + 80 + 2×100 + 6×40
+    expect(listed!.evaluation.totalCost).toBe(130 + 110 + 80 + 200 + 240);
   });
 
   it("rejeita deck acima do orçamento (constelações altas encarecem)", async () => {
@@ -54,7 +54,7 @@ describe("decks", () => {
 
   it("só aceita personagens da conta do jogador", async () => {
     const user = await createUser();
-    const ids = [...world.fiveStars.slice(0, 4), ...world.fourStars.slice(0, 6)].map((c) => c.id);
+    const ids = [...world.fiveStars.slice(0, 4), ...world.fourStars.slice(0, 7)].map((c) => c.id);
     await giveRoster(user, ids.slice(1));
     await expect(createDeck(user, { name: "Sem o primeiro", characterIds: ids })).rejects.toMatchObject({
       code: "DECK_INVALID",
@@ -64,18 +64,18 @@ describe("decks", () => {
 
   it("rejeita duplicatas, decks curtos e personagens desabilitados", async () => {
     const user = await createUser();
-    const ten = [...world.fiveStars.slice(0, 4), ...world.fourStars.slice(0, 6)].map((c) => c.id);
-    await giveRoster(user, ten);
-    await expect(createDeck(user, { name: "dup", characterIds: [ten[0]!, ...ten.slice(0, 9)] })).rejects.toMatchObject({ code: "DECK_INVALID" });
-    await expect(createDeck(user, { name: "curto", characterIds: ten.slice(0, 6) })).rejects.toMatchObject({ code: "DECK_INVALID" });
-    await setCharacterCompetitive(world.admin, ten[0]!, false);
-    await expect(createDeck(user, { name: "off", characterIds: ten })).rejects.toMatchObject({ code: "DECK_INVALID" });
+    const eleven = [...world.fiveStars.slice(0, 4), ...world.fourStars.slice(0, 7)].map((c) => c.id);
+    await giveRoster(user, eleven);
+    await expect(createDeck(user, { name: "dup", characterIds: [eleven[0]!, ...eleven.slice(0, 10)] })).rejects.toMatchObject({ code: "DECK_INVALID" });
+    await expect(createDeck(user, { name: "curto", characterIds: eleven.slice(0, 10) })).rejects.toMatchObject({ code: "DECK_INVALID" });
+    await setCharacterCompetitive(world.admin, eleven[0]!, false);
+    await expect(createDeck(user, { name: "off", characterIds: eleven })).rejects.toMatchObject({ code: "DECK_INVALID" });
   });
 
   it("edita, duplica, define padrão e exclui", async () => {
     const user = await createUser();
     const deck = await createValidDeck(user, world);
-    const ids = world.fourStars.slice(0, 10).map((c) => c.id);
+    const ids = world.fourStars.slice(0, 11).map((c) => c.id);
     await giveRoster(user, ids);
     await updateDeck(user, deck.id, { name: "Só 4★", characterIds: ids });
     const copy = await duplicateDeck(user, deck.id);
@@ -97,7 +97,7 @@ describe("decks", () => {
 
   it("nova tabela de preços invalida o deck sem excluí-lo e mostra o excesso", async () => {
     const user = await createUser();
-    const ids = [...world.fiveStars.slice(0, 9), ...world.fourStars.slice(0, 1)].map((c) => c.id); // 9×100 + 40 = 940
+    const ids = [...world.fiveStars.slice(0, 9), ...world.fourStars.slice(0, 2)].map((c) => c.id); // 9×100 + 2×40 = 980
     await giveRoster(user, ids);
     const deck = await createDeck(user, { name: "No limite", characterIds: ids });
     await setDraftPrice(world.admin, { characterId: world.fiveStars[0]!.id, cost: 170, justification: "Teste de aumento" });
@@ -106,22 +106,22 @@ describe("decks", () => {
     await publishDraft(world.admin, {});
     const [after] = await listUserDecks(user.id);
     expect(after!.id).toBe(deck.id);
-    expect(after!.evaluation).toMatchObject({ valid: false, totalCost: 1010, excess: 10 });
+    expect(after!.evaluation).toMatchObject({ valid: false, totalCost: 1050, excess: 50 });
   });
 
   it("subir a constelação na conta também pode invalidar o deck", async () => {
     const user = await createUser();
-    const ids = [...world.fiveStars.slice(0, 9), ...world.fourStars.slice(0, 1)].map((c) => c.id);
+    const ids = [...world.fiveStars.slice(0, 9), ...world.fourStars.slice(0, 2)].map((c) => c.id);
     await giveRoster(user, ids);
     await createDeck(user, { name: "No limite", characterIds: ids });
     await giveRoster(user, [ids[0]!], { constellation: 1 }); // 100 → 115
     const [after] = await listUserDecks(user.id);
-    expect(after!.evaluation.totalCost).toBe(955);
+    expect(after!.evaluation.totalCost).toBe(995);
     expect(after!.evaluation.valid).toBe(true);
     await giveRoster(user, [ids[1]!, ids[2]!, ids[3]!], { constellation: 6 }); // +300
     const [over] = await listUserDecks(user.id);
     expect(over!.evaluation.valid).toBe(false);
-    expect(over!.evaluation.excess).toBe(255);
+    expect(over!.evaluation.excess).toBe(295);
   });
 });
 

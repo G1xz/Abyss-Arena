@@ -41,6 +41,8 @@ export function PageHeader({
 export const STATUS_LABEL: Record<string, string> = {
   WAITING: "Aguardando",
   READY: "Pronta",
+  /** Exibição apenas: a fase de imunidade usa o status BANNING no banco. */
+  IMMUNITY: "Imunidade",
   BANNING: "Bans",
   PICKING: "Picks",
   LOCKED: "Times definidos",
@@ -58,7 +60,7 @@ export function MatchStatusBadge({ status }: { status: string }) {
         ? "secondary"
         : status === "DISPUTED"
           ? "destructive"
-          : status === "BANNING" || status === "PICKING"
+          : status === "BANNING" || status === "PICKING" || status === "IMMUNITY"
             ? "default"
             : "warning";
   return <Badge variant={variant}>{STATUS_LABEL[status] ?? status}</Badge>;

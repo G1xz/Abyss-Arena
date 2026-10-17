@@ -23,7 +23,7 @@ Valores padrão; todos configuráveis em **Admin → Configurações**. Cada sal
 - Orçamento padrão: **1000 pontos**. Não há limite de quantidade além do orçamento.
 - O deck só pode ter personagens da sua conta. O custo de cada um usa a sua constelação e o seu nível.
 - Um personagem aparece no máximo uma vez por deck.
-- **Tamanho mínimo do deck: em definição.** O valor deve garantir que os dois jogadores tenham opções válidas para concluir todos os bans e picks.
+- **Tamanho mínimo do deck: em definição.** O valor deve garantir que os dois jogadores tenham opções válidas para concluir todos os bans e picks. Enquanto isso, o sistema exige picks + bans recebidos (8 + 3 = **11**).
 - Decks são validados no servidor ao salvar, ao selecionar na sala, ao confirmar prontidão e no início do draft.
 - Se uma nova tabela, ou uma constelação nova na sua conta, deixar um deck acima do orçamento, ele **não é apagado**: a biblioteca mostra o excesso e o jogador ajusta.
 
@@ -34,7 +34,7 @@ Estados: `WAITING → READY → BANNING/PICKING → LOCKED → AWAITING_RESULTS 
 1. O anfitrião desafia o oponente pelo nickname, em **Jogar**. A sala é criada e o convite chega na hora (sino no topo da página). Convites expiram em 10 minutos.
 2. O convidado aceita e entra na sala. O deck padrão dele é selecionado automaticamente se for válido. Se ele recusar, o anfitrião pode convidar outra pessoa para a mesma sala. Só se entra numa sala por convite.
 3. Os dois escolhem um deck válido e confirmam prontidão. Trocar de deck desfaz a prontidão.
-4. Antes de iniciar o draft, os jogadores definem por **acordo** quem será **Jogador A** e quem será **Jogador B**. Não há sorteio nem prioridade automática do anfitrião.
+4. Antes de iniciar o draft, os jogadores definem por **acordo** quem será **Jogador A** e quem será **Jogador B**. Não há sorteio nem prioridade automática do anfitrião. Na sala, qualquer um dos dois pode **Trocar lados**; a troca desfaz a prontidão, e confirmar de novo é o aceite.
 5. O anfitrião inicia o draft. Nesse momento a tabela vigente é fixada e os dois decks viram **snapshots imutáveis**.
 6. O anfitrião pode cancelar, e o convidado pode sair, apenas antes do início do draft.
 
@@ -96,7 +96,16 @@ O draft é totalmente público: imunidades, bans, picks, armas e consumo de orç
 - Não há ação automática, pulo de turno nem encerramento por tempo.
 - A penalidade para tempo negativo será definida posteriormente.
 
+### Como o sistema aplica os pontos em aberto
+
+- **Undo:** vale enquanto o pick for a **última ação do draft**, ou seja, antes de o oponente agir. Também vale logo depois do último pick, enquanto ninguém enviou resultado. O tempo de quem estava com a vez é descontado até o momento do undo.
+- **Sem opções válidas:** se bans, picks exclusivos e imunes fora da janela deixarem o jogador sem nenhuma escolha, ele **passa a vez** (botão "Passar a vez"; o servidor só aceita quando não há opção). Sem isso, o draft travaria; isso não é um pulo por tempo.
+- **Imunidade:** "mesmo custo de personagem" é tratado como a mesma constelação nos dois decks. A fase usa o estado `BANNING` (a tela mostra "Imunidade").
+- O relógio vale para imunidade, bans e picks. Cada jogador vê os dois relógios em tempo real.
+
 ## Fase de armas
+
+> **Ainda não implementada.** Falta definir a tabela de custo de cada arma por refino e a duração da janela. Hoje o draft termina nos picks e a partida vai direto para os resultados.
 
 - A escolha de armas ocorre **simultaneamente**, após os picks e antes da preparação para o confronto.
 - Cada jogador recebe **100 pontos** exclusivos para armas.
@@ -111,6 +120,8 @@ O draft é totalmente público: imunidades, bans, picks, armas e consumo de orç
 - Armas, refinos e orçamento restante ficam visíveis em tempo real para jogadores e espectadores.
 
 ## Organização dos times
+
+> **Ainda não implementada**: depende da fase de armas.
 
 - A organização dos times é liberada somente **depois da fase de armas**.
 - Os jogadores organizam composições no site para exibição ao público antes do duelo.

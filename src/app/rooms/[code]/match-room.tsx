@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { History, Wifi, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import { History, Undo2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { MatchStatusBadge } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,30 @@ import { DraftBoard } from "./draft-board";
 import { Lobby, type LobbyDeck } from "./lobby";
 import { FinalTeams, ResultsPanel, RulesCard } from "./results-panel";
 import { describeEvent, nick, type RoomContext } from "./shared";
+
+/** Logo após o último pick, antes de qualquer resultado: ainda dá para desfazer. */
+function LateUndo({ ctx }: { ctx: RoomContext }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-pick/40 bg-pick/10 p-3 text-sm">
+      <p className="flex-1">Seu último pick fechou o draft. Se quiser, ainda dá para desfazê-lo antes de alguém enviar o tempo.</p>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const res = await ctx.emit("match:undo");
+          setBusy(false);
+          if (!res.ok) toast.error(res.error);
+        }}
+        data-testid="undo-pick"
+      >
+        <Undo2 /> Desfazer último pick
+      </Button>
+    </div>
+  );
+}
 
 export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id: string; nickname: string }; decks: LobbyDeck[] }) {
   const router = useRouter();
@@ -31,16 +55,31 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
   }, [status, router, state.code]);
 
   const inLobby = state.status === "WAITING" || state.status === "READY";
+  const drafting = Boolean(state.draft) && (state.status === "BANNING" || state.status === "PICKING");
   const afterDraft = ["LOCKED", "AWAITING_RESULTS", "DISPUTED", "COMPLETED"].includes(state.status);
+  const lateUndo = state.status === "LOCKED" && mySeat && state.draft?.undo[mySeat].available;
+
+  const history = (
+    <ol className="grid max-h-[480px] gap-2 overflow-y-auto text-sm" data-testid="event-log">
+      {state.events.map((e) => (
+        <li key={e.id} className="border-l-2 border-border pl-2">
+          <p>{describeEvent(e)}</p>
+          <time className="text-[11px] text-muted-foreground" dateTime={e.createdAt}>
+            {new Date(e.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </time>
+        </li>
+      ))}
+    </ol>
+  );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6" data-testid="match-room" data-status={state.status}>
-      <header className="mb-5 flex flex-wrap items-center gap-3">
+    <div className={cn("mx-auto w-full px-4", drafting ? "max-w-[1600px] py-3" : "max-w-7xl py-6")} data-testid="match-room" data-status={state.status}>
+      <header className={cn("flex flex-wrap items-center gap-3", drafting ? "mb-3" : "mb-5")}>
         <div>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Sala</p>
-          <p className="font-mono text-2xl font-bold tracking-[0.2em]">{state.code}</p>
+          <p className={cn("font-mono font-bold tracking-[0.2em]", drafting ? "text-lg" : "text-2xl")}>{state.code}</p>
         </div>
-        <MatchStatusBadge status={state.status} />
+        <MatchStatusBadge status={state.draft?.currentStep?.type === "IMMUNE" ? "IMMUNITY" : state.status} />
         <div className="flex items-center gap-2 text-sm">
           {(["A", "B"] as const).map((seat, i) => {
             const p = state.players[seat];
@@ -75,9 +114,21 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
             <Link href="/play">Desafiar alguém</Link>
           </Button>
         </div>
+      ) : drafting ? (
+        // Draft: tela inteira para decks, ordem e picks; o histórico fica recolhido abaixo.
+        <div className="grid gap-3">
+          <DraftBoard ctx={ctx} />
+          <details className="rounded-xl border bg-card/50 p-3">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <History className="size-4" /> Histórico da sala
+            </summary>
+            <div className="mt-3">{history}</div>
+          </details>
+        </div>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
           <div className="grid min-w-0 gap-6">
+            {lateUndo && <LateUndo ctx={ctx} />}
             {state.status === "CANCELLED" && (
               <div className="rounded-xl border bg-card/70 p-6" data-testid="room-cancelled">
                 <p className="font-display text-lg font-semibold">Sala cancelada</p>
@@ -89,7 +140,6 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
             )}
             {inLobby && <Lobby ctx={ctx} decks={decks} />}
             {inLobby && <RulesCard ctx={ctx} />}
-            {state.draft && (state.status === "BANNING" || state.status === "PICKING") && <DraftBoard ctx={ctx} />}
             {afterDraft && (
               <>
                 <FinalTeams ctx={ctx} />
@@ -105,23 +155,13 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
                 )}
               </>
             )}
-            {(state.status === "BANNING" || state.status === "PICKING") && <RulesCard ctx={ctx} />}
           </div>
 
           <aside className="h-fit rounded-xl border bg-card/60 p-4" aria-label="Histórico da sala">
             <p className="mb-3 flex items-center gap-2 font-display font-semibold">
               <History className="size-4" /> Histórico
             </p>
-            <ol className="grid max-h-[480px] gap-2 overflow-y-auto text-sm" data-testid="event-log">
-              {state.events.map((e) => (
-                <li key={e.id} className="border-l-2 border-border pl-2">
-                  <p>{describeEvent(e)}</p>
-                  <time className="text-[11px] text-muted-foreground" dateTime={e.createdAt}>
-                    {new Date(e.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                  </time>
-                </li>
-              ))}
-            </ol>
+            {history}
             <p className="mt-3 text-xs text-muted-foreground">
               Você: {me.nickname}
               {mySeat ? ` (jogador ${mySeat})` : " (admin)"} · Oponente: {mySeat ? nick(state, opponentOf(mySeat)) : "—"}

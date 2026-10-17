@@ -1,7 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/server/db";
 import { confirmOpponentResult, disputeOpponentResult, resolveDispute, submitResult } from "@/server/matches/results";
-import { cancelRoom, createRoom, joinRoom, leaveRoom, performDraftAction, selectDeck, setReady, startDraft } from "@/server/matches/service";
+import {
+  cancelRoom,
+  createRoom,
+  joinRoom,
+  leaveRoom,
+  performDraftAction,
+  selectDeck,
+  setReady,
+  startDraft,
+  swapSeats,
+  undoDraftPick,
+} from "@/server/matches/service";
 import { getMatchView } from "@/server/matches/view";
 import { publishDraft, setDraftPrice } from "@/server/pricing/service";
 import { getRanking } from "@/server/stats/service";
@@ -36,7 +47,7 @@ describe("salas", () => {
 
     const view = await getMatchView(room.id, a);
     expect(view.status).toBe("BANNING");
-    expect(view.draft!.decks.A).toHaveLength(10);
+    expect(view.draft!.decks.A).toHaveLength(11);
     expect(view.viewerSeat).toBe("A");
     expect(view.events.map((e) => e.type)).toEqual(expect.arrayContaining(["ROOM_CREATED", "PLAYER_JOINED", "DRAFT_STARTED"]));
   });
@@ -65,6 +76,52 @@ describe("salas", () => {
     expect((await prisma.match.findUniqueOrThrow({ where: { id: room.id } })).status).toBe("CANCELLED");
   });
 
+  it("jogadores trocam A/B por acordo: prontidão desfeita e o anfitrião continua anfitrião", async () => {
+    const a = await createUser();
+    const b = await createUser();
+    const deckA = await createValidDeck(a, world);
+    const deckB = await createValidDeck(b, world, 5);
+    const room = await createRoom(a, { deckId: deckA.id });
+    await expect(swapSeats(a, room.id)).rejects.toMatchObject({ code: "INVALID_STATE" }); // sozinho na sala
+    await joinRoom(b, room.code);
+    await selectDeck(b, room.id, deckB.id);
+    await setReady(a, room.id, true);
+
+    await swapSeats(b, room.id);
+    let view = await getMatchView(room.id, a);
+    expect(view.viewerSeat).toBe("B");
+    expect(view.players.A?.userId).toBe(b.id);
+    expect(view.players.A?.deck?.id).toBe(deckB.id);
+    expect(view.players.A?.isReady || view.players.B?.isReady).toBe(false);
+    expect(view.events[0]).toMatchObject({ type: "SEATS_SWAPPED" });
+
+    // Só o anfitrião inicia, mesmo como jogador B; quem age primeiro no draft é o jogador A.
+    await setReady(a, room.id, true);
+    await setReady(b, room.id, true);
+    await expect(startDraft(b, room.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await startDraft(a, room.id);
+    view = await getMatchView(room.id, b);
+    expect(view.draft!.currentStep!.actor).toBe("A");
+    expect(view.viewerSeat).toBe("A");
+  });
+
+  it("convidado sai depois da troca: o anfitrião fica no seu lado e a vaga livre é ocupada", async () => {
+    const a = await createUser();
+    const b = await createUser();
+    const c = await createUser();
+    const room = await createRoom(a, {});
+    await joinRoom(b, room.code);
+    await swapSeats(a, room.id); // anfitrião vira B
+    await leaveRoom(b, room.id);
+    expect((await prisma.match.findUniqueOrThrow({ where: { id: room.id } })).status).toBe("WAITING");
+    await joinRoom(c, room.code);
+    const seats = await prisma.matchPlayer.findMany({ where: { matchId: room.id }, orderBy: { seat: "asc" } });
+    expect(seats.map((s) => [s.seat, s.userId])).toEqual([
+      ["A", c.id],
+      ["B", a.id],
+    ]);
+  });
+
   it("não aceita deck inválido nem troca de deck após o início", async () => {
     const m = await startedMatch(world);
     await expect(selectDeck(m.a, m.matchId, m.deckA.id)).rejects.toMatchObject({ code: "INVALID_STATE" });
@@ -75,13 +132,14 @@ describe("motor de draft no servidor", () => {
   it("rejeita ações fora do turno e ilegais", async () => {
     const m = await startedMatch(world);
     const view = await getMatchView(m.matchId, m.a);
-    const target = view.draft!.decks.B[0]!.characterId;
-    await expect(performDraftAction(m.b, m.matchId, { stepIndex: 0, characterId: view.draft!.decks.A[0]!.characterId })).rejects.toMatchObject({
-      code: "NOT_YOUR_TURN",
-    });
-    await expect(performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: view.draft!.decks.A[0]!.characterId })).rejects.toMatchObject({
-      code: "ILLEGAL_ACTION",
-    });
+    // Os decks têm 2 personagens em comum: o draft começa pela imunidade.
+    expect(view.draft!.currentStep).toEqual({ type: "IMMUNE", actor: "A" });
+    expect(view.draft!.eligibleImmune).toHaveLength(2);
+    const target = view.draft!.options[0]!;
+    const notEligible = view.draft!.decks.A.find((c) => !view.draft!.eligibleImmune.includes(c.characterId))!.characterId;
+    await expect(performDraftAction(m.b, m.matchId, { stepIndex: 0, characterId: target })).rejects.toMatchObject({ code: "NOT_YOUR_TURN" });
+    await expect(performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: notEligible })).rejects.toMatchObject({ code: "ILLEGAL_ACTION" });
+    await expect(performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: null })).rejects.toMatchObject({ code: "ILLEGAL_ACTION" });
     await expect(performDraftAction(m.a, m.matchId, { stepIndex: 3, characterId: target })).rejects.toMatchObject({ code: "STALE_ACTION" });
     const outsider = await createUser();
     await expect(performDraftAction(outsider, m.matchId, { stepIndex: 0, characterId: target })).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -94,12 +152,12 @@ describe("motor de draft no servidor", () => {
   it("concorrência: ações simultâneas no mesmo turno resultam em uma única escolha", async () => {
     const m = await startedMatch(world);
     const view = await getMatchView(m.matchId, m.a);
-    const [c1, c2, c3] = view.draft!.decks.B.map((c) => c.characterId);
+    const [c1, c2] = view.draft!.options;
     const results = await Promise.allSettled([
       performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: c1! }),
       performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: c2! }),
-      performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: c3! }),
-      performDraftAction(m.b, m.matchId, { stepIndex: 0, characterId: view.draft!.decks.A[0]!.characterId }),
+      performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: c1! }),
+      performDraftAction(m.b, m.matchId, { stepIndex: 0, characterId: c2! }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(1);
@@ -107,14 +165,61 @@ describe("motor de draft no servidor", () => {
     expect(match.currentStep).toBe(1);
   });
 
-  it("draft completo trava os times e aguarda resultados", async () => {
+  it("draft completo: imunidade, 3 bans e 8 picks por jogador; trava os times e aguarda resultados", async () => {
     const m = await startedMatch(world);
     const view = await completeDraft(m.matchId, m.a, m.b);
     expect(view.status).toBe("LOCKED");
-    expect(view.draft!.picks.A).toHaveLength(8);
-    expect(view.draft!.picks.B).toHaveLength(8);
-    expect(view.draft!.bannedFrom.A).toHaveLength(2);
-    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(20);
+    const d = view.draft!;
+    expect(d.picks.A).toHaveLength(8);
+    expect(d.picks.B).toHaveLength(8);
+    expect(d.bans.A).toHaveLength(3);
+    expect(d.bannedFrom.A).toHaveLength(3);
+    // Os dois imunes ficam com os dois jogadores (escolhidos no 4º e no 8º pick).
+    for (const seat of ["A", "B"] as const) {
+      expect([d.picks[seat][3], d.picks[seat][7]].sort()).toEqual([d.immune.A, d.immune.B].sort());
+    }
+    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(24);
+    expect(view.events.map((e) => e.type)).toEqual(expect.arrayContaining(["DRAFT_IMMUNE", "DRAFT_BAN", "DRAFT_PICK", "DRAFT_LOCKED"]));
+  });
+
+  it("relógio: cada jogador gasta só o tempo dos próprios turnos", async () => {
+    const m = await startedMatch(world);
+    // Simula 40 s de reflexão de A antes de declarar o imune.
+    await prisma.match.update({ where: { id: m.matchId }, data: { turnStartedAt: new Date(Date.now() - 40_000) } });
+    const view = await getMatchView(m.matchId, m.a);
+    await performDraftAction(m.a, m.matchId, { stepIndex: 0, characterId: view.draft!.options[0]! });
+    const after = await getMatchView(m.matchId, m.a);
+    expect(after.draft!.clock!.limitMs).toBe(300_000);
+    expect(after.draft!.clock!.usedMs.A).toBeGreaterThanOrEqual(40_000);
+    expect(after.draft!.clock!.usedMs.A).toBeLessThan(45_000);
+    expect(after.draft!.clock!.usedMs.B).toBe(0);
+    expect(after.draft!.clock!.turnStartedAt).not.toBeNull();
+  });
+
+  it("desfazer: só o último pick, uma vez por jogador, e o turno volta para quem desfez", async () => {
+    const m = await startedMatch(world);
+    const step = async () => {
+      const v = await getMatchView(m.matchId, m.a);
+      const d = v.draft!;
+      const actor = d.currentStep!.actor === "A" ? m.a : m.b;
+      await performDraftAction(actor, m.matchId, { stepIndex: d.stepIndex, characterId: d.options[0]! });
+    };
+    for (let i = 0; i < 8; i++) await step(); // 2 imunidades + 6 bans
+    await expect(undoDraftPick(m.a, m.matchId)).rejects.toMatchObject({ code: "INVALID_STATE" }); // ainda não há pick
+    await step(); // 1º pick de A
+    const picked = (await getMatchView(m.matchId, m.a)).draft!.picks.A[0]!;
+    await expect(undoDraftPick(m.b, m.matchId)).rejects.toMatchObject({ code: "INVALID_STATE" });
+    await undoDraftPick(m.a, m.matchId);
+
+    const view = await getMatchView(m.matchId, m.a);
+    expect(view.draft!.picks.A).toEqual([]);
+    expect(view.draft!.currentStep).toEqual({ type: "PICK", actor: "A" });
+    expect(view.draft!.options).toContain(picked);
+    expect(view.draft!.undo.A).toEqual({ left: 0, available: false });
+    expect(view.events[0]).toMatchObject({ type: "DRAFT_UNDO" });
+
+    await step();
+    await expect(undoDraftPick(m.a, m.matchId)).rejects.toMatchObject({ code: "INVALID_STATE" }); // já usou
   });
 
   it("snapshots congelam decks e custos: mudanças posteriores não alteram a partida", async () => {
@@ -130,7 +235,7 @@ describe("motor de draft no servidor", () => {
 
     const view = await getMatchView(m.matchId, m.a);
     expect(view.draft!.decks.A.find((c) => c.characterId === target.characterId)!.cost).toBe(originalCost);
-    expect(view.draft!.decks.A).toHaveLength(10);
+    expect(view.draft!.decks.A).toHaveLength(11);
     expect(view.draft!.deckCosts.A).toBe(snapshot.totalCost);
     expect(view.priceVersion.number).toBe(1);
   });

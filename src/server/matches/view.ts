@@ -1,5 +1,5 @@
 import { evaluateDeck } from "@/domain/deck";
-import { computeDraftState, type Seat } from "@/domain/draft";
+import { canUndo, computeDraftState, type DraftActionKind, type DraftStep, type Seat } from "@/domain/draft";
 import type { AbyssRulesSnapshot } from "../abyss/service";
 import { prisma, type Tx } from "../db";
 import { AppError } from "../errors";
@@ -51,15 +51,32 @@ export interface MatchView {
     >
   >;
   draft: null | {
+    /** Sequência efetiva (com a imunidade, quando se aplica). */
+    sequence: DraftStep[];
     stepIndex: number;
     totalSteps: number;
     isComplete: boolean;
-    currentStep: { type: "BAN" | "PICK"; actor: Seat } | null;
+    currentStep: DraftStep | null;
     decks: Record<Seat, DraftCharacterView[]>;
     deckNames: Record<Seat, string>;
     deckCosts: Record<Seat, number>;
+    immunityActive: boolean;
+    eligibleImmune: string[];
+    immune: Record<Seat, string | null>;
+    /** Picks individuais em que um imune pode ser escolhido. */
+    immuneSlots: number[];
+    /** Bans feitos por cada jogador. */
+    bans: Record<Seat, string[]>;
+    /** Bans que atingiram o deck de cada jogador. */
     bannedFrom: Record<Seat, string[]>;
+    banned: string[];
     picks: Record<Seat, string[]>;
+    /** Escolhas válidas no passo atual (vazio com o draft em andamento = só resta passar). */
+    options: string[];
+    pickNumber: number | null;
+    actions: { stepIndex: number; type: DraftActionKind; actor: Seat; characterId: string | null }[];
+    undo: Record<Seat, { left: number; available: boolean }>;
+    clock: null | { limitMs: number; usedMs: Record<Seat, number>; turnStartedAt: string | null; serverNow: string };
   };
   results: Partial<
     Record<
@@ -147,7 +164,7 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
   let draft: MatchView["draft"] = null;
   if (match.draftStartedAt) {
     const ctx = await loadDraftContext(db, match.id);
-    const state = computeDraftState(config.draft, ctx.decks, ctx.actions);
+    const state = computeDraftState(config.draft, ctx.decks, ctx.actions, ctx.copies);
     const decks = { A: [], B: [] } as Record<Seat, DraftCharacterView[]>;
     const deckNames = { A: "", B: "" } as Record<Seat, string>;
     const deckCosts = { A: 0, B: 0 } as Record<Seat, number>;
@@ -168,7 +185,16 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
         }))
         .sort((a, b) => b.cost - a.cost || a.name.localeCompare(b.name));
     }
+    const undoOpen = ["BANNING", "PICKING", "LOCKED"].includes(match.status);
+    const undo = { A: { left: 0, available: false }, B: { left: 0, available: false } };
+    const usedMs = { A: 0, B: 0 };
+    for (const p of match.players) {
+      const left = Math.max(0, (config.draft.undoPerPlayer ?? 0) - p.undosUsed);
+      undo[p.seat] = { left, available: undoOpen && canUndo(config.draft, ctx.actions, p.seat, p.undosUsed) };
+      usedMs[p.seat] = p.clockUsedMs;
+    }
     draft = {
+      sequence: state.sequence,
       stepIndex: state.stepIndex,
       totalSteps: state.totalSteps,
       isComplete: state.isComplete,
@@ -176,8 +202,26 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
       decks,
       deckNames,
       deckCosts,
+      immunityActive: state.immunityActive,
+      eligibleImmune: state.eligibleImmune,
+      immune: state.immune,
+      immuneSlots: state.immunityActive ? (config.draft.immunity?.pickSlots ?? []) : [],
+      bans: state.bans,
       bannedFrom: state.bannedFrom,
+      banned: state.banned,
       picks: state.picks,
+      options: state.options,
+      pickNumber: state.pickNumber,
+      actions: ctx.actions.map((a) => ({ stepIndex: a.stepIndex, type: a.type, actor: a.actorSeat, characterId: a.characterId })),
+      undo,
+      clock: config.draft.clockSeconds
+        ? {
+            limitMs: config.draft.clockSeconds * 1000,
+            usedMs,
+            turnStartedAt: match.turnStartedAt?.toISOString() ?? null,
+            serverNow: new Date().toISOString(),
+          }
+        : null,
     };
   }
 

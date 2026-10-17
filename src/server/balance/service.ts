@@ -40,7 +40,11 @@ export async function loadMatchSamples(where: Prisma.MatchWhereInput, db: Tx = p
       B: { deck: [] as string[], bannedFrom: [] as string[], picks: [] as string[] },
     };
     for (const s of m.snapshots) seats[s.seat].deck = s.entries.map((e) => e.characterId);
-    for (const a of m.actions) (a.type === "BAN" ? seats[a.targetSeat].bannedFrom : seats[a.targetSeat].picks).push(a.characterId);
+    // Imunidades e turnos passados não contam como pick nem ban.
+    for (const a of m.actions) {
+      if (!a.characterId || (a.type !== "BAN" && a.type !== "PICK")) continue;
+      (a.type === "BAN" ? seats[a.targetSeat].bannedFrom : seats[a.targetSeat].picks).push(a.characterId);
+    }
     return { matchId: m.id, completedAt: m.completedAt!, cycleId: m.abyssCycleId, seats, winnerSeat: m.winnerSeat, isDraw: m.isDraw };
   });
 }

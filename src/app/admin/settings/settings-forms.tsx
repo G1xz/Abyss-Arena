@@ -28,6 +28,11 @@ type Competitive = {
   picksPerPlayer: number;
   draftPreset: string;
   customSequence: string;
+  immunityEnabled: boolean;
+  immunityPickSlots: string;
+  immunityMinEligible: number;
+  clockSeconds: number;
+  undoPerPlayer: number;
   tiePolicy: "DRAW" | "FIRST_SUBMITTED_WINS";
   minResultSeconds: number;
   maxResultSeconds: number;
@@ -105,6 +110,27 @@ export function CompetitiveSettingsForm({ initial }: { initial: Competitive }) {
           />
           <p className="text-xs text-muted-foreground">Formato: BAN_PLAYER_A, PICK_PLAYER_B, ... O servidor valida a quantidade exata de bans e picks de cada jogador.</p>
         </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="immunity">Fase de imunidade</Label>
+          <NativeSelect id="immunity" value={f.immunityEnabled ? "on" : "off"} onChange={(e) => set("immunityEnabled", e.target.value === "on")}>
+            <option value="on">Ativa (quando houver personagens em comum)</option>
+            <option value="off">Desativada</option>
+          </NativeSelect>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="immunity-slots">Picks em que o imune pode ser escolhido</Label>
+          <Input id="immunity-slots" value={f.immunityPickSlots} onChange={(e) => set("immunityPickSlots", e.target.value)} placeholder="4, 8" />
+          <p className="text-xs text-muted-foreground">Pick individual de cada jogador (1 = primeiro).</p>
+        </div>
+        <NumberField
+          id="immunity-min"
+          label="Personagens em comum para haver imunidade"
+          value={f.immunityMinEligible}
+          onChange={(v) => set("immunityMinEligible", v)}
+          hint="Mesmo personagem e mesma constelação nos dois decks"
+        />
+        <NumberField id="clock" label="Relógio por jogador (s)" value={f.clockSeconds} onChange={(v) => set("clockSeconds", v)} hint="Para imunidade, bans e picks; 0 = sem relógio" />
+        <NumberField id="undo" label="Desfazer por jogador" value={f.undoPerPlayer} onChange={(v) => set("undoPerPlayer", v)} hint="Desfaz o último pick confirmado" />
         <div className="grid gap-1.5">
           <Label htmlFor="tie">Empate exato</Label>
           <NativeSelect id="tie" value={f.tiePolicy} onChange={(e) => set("tiePolicy", e.target.value as Competitive["tiePolicy"])}>

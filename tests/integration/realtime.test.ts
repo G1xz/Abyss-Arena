@@ -86,16 +86,17 @@ describe("tempo real (Socket.IO)", () => {
     expect(subB.state!.viewerSeat).toBe("B");
     expect(subB.online!.sort()).toEqual([m.a.id, m.b.id].sort());
 
-    // A bane; B recebe o novo estado em tempo real.
-    const target = subA.state!.draft!.decks.B[0]!.characterId;
+    // A declara o imune; B recebe o novo estado em tempo real.
+    expect(subA.state!.draft!.currentStep).toEqual({ type: "IMMUNE", actor: "A" });
+    const target = subA.state!.draft!.options[0]!;
     const received = nextState(sb, (v) => v.draft?.stepIndex === 1);
     const ack = await emit(sa, "match:draftAction", { matchId: m.matchId, stepIndex: 0, characterId: target });
     expect(ack.ok).toBe(true);
-    expect((await received).draft!.bannedFrom.B).toEqual([target]);
+    expect((await received).draft!.immune.A).toBe(target);
 
     // B cai; ações continuam persistidas no banco.
     sb.disconnect();
-    const out = await emit(sa, "match:draftAction", { matchId: m.matchId, stepIndex: 1, characterId: subA.state!.draft!.decks.A[0]!.characterId });
+    const out = await emit(sa, "match:draftAction", { matchId: m.matchId, stepIndex: 1, characterId: subA.state!.draft!.options[1]! });
     expect(out).toMatchObject({ ok: false, code: "NOT_YOUR_TURN" });
 
     // B reconecta (nova conexão, como ao atualizar a página) e recebe o estado completo.
@@ -103,14 +104,17 @@ describe("tempo real (Socket.IO)", () => {
     await connected(sb);
     const restored = await emit(sb, "match:subscribe", { matchId: m.matchId });
     expect(restored.state!.draft!.stepIndex).toBe(1);
-    expect(restored.state!.draft!.bannedFrom.B).toEqual([target]);
-    expect(restored.state!.draft!.currentStep).toEqual({ type: "BAN", actor: "B" });
+    expect(restored.state!.draft!.immune.A).toBe(target);
+    expect(restored.state!.draft!.currentStep).toEqual({ type: "IMMUNE", actor: "B" });
+    expect(restored.state!.draft!.options).not.toContain(target);
 
     // E segue jogando normalmente.
     const toA = nextState(sa, (v) => v.draft?.stepIndex === 2);
-    const banByB = restored.state!.draft!.decks.A[0]!.characterId;
-    expect((await emit(sb, "match:draftAction", { matchId: m.matchId, stepIndex: 1, characterId: banByB })).ok).toBe(true);
-    expect((await toA).draft!.bannedFrom.A).toEqual([banByB]);
+    const immuneB = restored.state!.draft!.options[0]!;
+    expect((await emit(sb, "match:draftAction", { matchId: m.matchId, stepIndex: 1, characterId: immuneB })).ok).toBe(true);
+    const afterB = await toA;
+    expect(afterB.draft!.immune.B).toBe(immuneB);
+    expect(afterB.draft!.currentStep).toEqual({ type: "BAN", actor: "A" });
   });
 
   it("valida o formato das mensagens", async () => {

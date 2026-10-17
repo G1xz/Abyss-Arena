@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Crown, Loader2, LogOut, Play, X } from "lucide-react";
+import { ArrowLeftRight, Check, Crown, Loader2, LogOut, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge, NativeSelect } from "@/components/ui/misc";
 import type { Seat } from "@/domain/draft";
@@ -20,10 +20,10 @@ export interface LobbyDeck {
 }
 
 export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) {
-  const { state, mySeat, emit, online } = ctx;
+  const { state, mySeat, emit, online, me } = ctx;
   const [busy, setBusy] = useState<string | null>(null);
-  const isHost = mySeat === "A";
-  const guest = state.players.B;
+  const isHost = state.hostId === me.id;
+  const full = Boolean(state.players.A && state.players.B);
 
   const run = async (key: string, event: string, payload?: Record<string, unknown>, success?: string) => {
     setBusy(key);
@@ -48,7 +48,7 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
         <div className="flex items-center gap-2">
           <span className={cn("size-2.5 rounded-full", isOnline ? "bg-success shadow-[0_0_8px_var(--success)]" : "bg-muted-foreground/40")} title={isOnline ? "Conectado" : "Desconectado"} />
           <span className="font-display text-lg font-semibold">{player.nickname}</span>
-          {seat === "A" && <Crown className="size-4 text-gold" aria-label="Anfitrião" />}
+          {player.userId === state.hostId && <Crown className="size-4 text-gold" aria-label="Anfitrião" />}
           <Badge variant="secondary" className="ml-auto">
             Jogador {seat}
           </Badge>
@@ -120,7 +120,21 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
     <div className="grid gap-4">
       <div className="grid items-stretch gap-4 md:grid-cols-[1fr_auto_1fr]">
         {seatCard("A")}
-        <div className="hidden items-center justify-center font-display text-2xl font-bold text-muted-foreground md:flex">VS</div>
+        <div className="flex flex-col items-center justify-center gap-2">
+          <span className="hidden font-display text-2xl font-bold text-muted-foreground md:block">VS</span>
+          {mySeat && full && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() => run("swap", "match:swapSeats", {}, "Lados trocados: os dois confirmam prontidão de novo")}
+              data-testid="swap-seats"
+              title="Quem é o jogador A e quem é o B é combinado entre vocês"
+            >
+              {busy === "swap" ? <Loader2 className="animate-spin" /> : <ArrowLeftRight />} Trocar lados
+            </Button>
+          )}
+        </div>
         {seatCard("B")}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/60 p-4">
@@ -129,8 +143,8 @@ export function Lobby({ ctx, decks }: { ctx: RoomContext; decks: LobbyDeck[] }) 
             ? isHost
               ? "Os dois jogadores estão prontos. Inicie o draft quando quiser."
               : "Os dois jogadores estão prontos. Aguardando o anfitrião iniciar o draft."
-            : guest
-              ? "Os dois jogadores precisam selecionar um deck válido e confirmar prontidão."
+            : full
+              ? "Combinem quem é o jogador A (começa a imunidade e os bans) e quem é o B. Depois, cada um seleciona um deck válido e confirma prontidão."
               : "Convide um oponente para a vaga livre."}
         </p>
         <div className="flex flex-wrap gap-2">

@@ -34,7 +34,7 @@ describe("métricas e propostas", () => {
     const totalPicks = metrics.reduce((s, m) => s + m.picks, 0);
     const totalBans = metrics.reduce((s, m) => s + m.bans, 0);
     expect(totalPicks).toBe(16);
-    expect(totalBans).toBe(4);
+    expect(totalBans).toBe(6);
     expect(metrics.reduce((s, m) => s + m.wins, 0)).toBe(8);
 
     const stats = await getCharacterStats();
@@ -85,7 +85,7 @@ describe("métricas e propostas", () => {
     await sensitiveSettings();
     const m = await playCompletedMatch(world);
     const picks = await prisma.draftAction.findMany({ where: { matchId: m.matchId, type: "PICK" } });
-    for (const p of picks) await setCharacterBalanceLock(world.admin, p.characterId, true, "Em observação");
+    for (const p of picks) await setCharacterBalanceLock(world.admin, p.characterId!, true, "Em observação");
     const run = await runBalanceAnalysis({ kind: "MANUAL", generateProposals: true });
     const lockedIds = new Set(picks.map((p) => p.characterId));
     const proposals = await prisma.balanceProposal.findMany({ where: { runId: run.runId } });

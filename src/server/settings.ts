@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
-import { buildSequence, DRAFT_PRESETS, validateDraftConfig, type DraftConfig } from "@/domain/draft";
+import { buildSequence, DEFAULT_IMMUNITY, DRAFT_PRESETS, validateDraftConfig, type DraftConfig } from "@/domain/draft";
 import { DEFAULT_COST_RULES, type CostRules } from "@/domain/pricing";
 import { prisma, type Tx } from "./db";
 
-const draftStepSchema = z.object({ type: z.enum(["BAN", "PICK"]), actor: z.enum(["A", "B"]) });
+// IMMUNE é aceito no tipo, mas validateDraftConfig o recusa na sequência (a fase de imunidade é automática).
+const draftStepSchema = z.object({ type: z.enum(["IMMUNE", "BAN", "PICK"]), actor: z.enum(["A", "B"]) });
 const curveSchema = z.array(z.number().min(0).max(500)).length(7);
 
 export const competitiveSettingsSchema = z
@@ -19,7 +20,16 @@ export const competitiveSettingsSchema = z
       bansPerPlayer: z.number().int().min(0).max(10),
       picksPerPlayer: z.number().int().min(1).max(12),
       sequence: z.array(draftStepSchema).min(1).max(60),
-      turnTimeoutSeconds: z.number().int().positive().nullable().optional(),
+      immunity: z
+        .object({
+          enabled: z.boolean(),
+          pickSlots: z.array(z.number().int().min(1).max(12)).max(12),
+          minEligible: z.number().int().min(2).max(20),
+        })
+        .nullable()
+        .optional(),
+      clockSeconds: z.number().int().min(30).max(3600).nullable().optional(),
+      undoPerPlayer: z.number().int().min(0).max(5).optional(),
     }),
     tiePolicy: z.enum(["DRAW", "FIRST_SUBMITTED_WINS"]),
     minResultSeconds: z.number().min(1).max(3600),
@@ -37,20 +47,29 @@ export const competitiveSettingsSchema = z
 
 export type CompetitiveSettings = z.infer<typeof competitiveSettingsSchema>;
 
+export const DEFAULT_DRAFT: DraftConfig = {
+  bansPerPlayer: 3,
+  picksPerPlayer: 8,
+  sequence: buildSequence("BANS_FIRST_SNAKE", 3, 8),
+  immunity: DEFAULT_IMMUNITY,
+  clockSeconds: 300,
+  undoPerPlayer: 1,
+};
+
+/** Formato anterior às regras v2 (2 bans, sem imunidade, relógio ou desfazer): o seed atualiza bancos que ainda o usam. */
+export function isLegacyDraft(draft: Partial<DraftConfig> & Record<string, unknown>): boolean {
+  return draft.immunity === undefined && draft.clockSeconds === undefined && draft.undoPerPlayer === undefined;
+}
+
 export const DEFAULT_COMPETITIVE_SETTINGS: CompetitiveSettings = {
   deckBudget: 1000,
   minCharacterCost: 10,
   maxCharacterCost: 400,
   constellationCurve: DEFAULT_COST_RULES.constellationCurve,
   levelBonus: DEFAULT_COST_RULES.levelBonus,
-  // 8 picks por jogador (dois times de 4: metade de cima e metade de baixo), ordem em serpente.
+  // Regras competitivas: imunidade → 3 bans (A-B-B-A-A-B) → 8 picks em serpente (A-B-B-A ×4).
   draftPreset: "BANS_FIRST_SNAKE",
-  draft: {
-    bansPerPlayer: 2,
-    picksPerPlayer: 8,
-    sequence: buildSequence("BANS_FIRST_SNAKE", 2, 8),
-    turnTimeoutSeconds: null,
-  },
+  draft: DEFAULT_DRAFT,
   tiePolicy: "DRAW",
   minResultSeconds: 5,
   maxResultSeconds: 3600,
@@ -109,7 +128,13 @@ export async function getSettings<K extends SettingKey>(key: K, db: Tx = prisma)
   const row = await db.systemSetting.findUnique({ where: { key } });
   const { schema, defaults } = SETTINGS[key];
   if (!row) return defaults as SettingValue<K>;
-  const merged = { ...(defaults as object), ...(row.value as object) };
+  const stored = { ...(row.value as Record<string, unknown>) };
+  // Configurações salvas antes das regras v2 do draft passam a usar o formato novo.
+  if (key === "competitive" && stored.draft && isLegacyDraft(stored.draft as Record<string, unknown>)) {
+    delete stored.draft;
+    delete stored.draftPreset;
+  }
+  const merged = { ...(defaults as object), ...stored };
   const parsed = schema.safeParse(merged);
   if (!parsed.success) {
     console.warn(`[settings] valor inválido para "${key}", usando padrão`, parsed.error.issues[0]?.message);

@@ -140,16 +140,14 @@ export async function seedDemoData() {
       if (d.isComplete) break;
       const step = d.currentStep!;
       const actor = step.actor === "A" ? a : b;
-      const own = step.actor;
-      const opp = own === "A" ? "B" : "A";
-      const candidates =
-        step.type === "BAN"
-          ? d.decks[opp].filter((c) => !d.bannedFrom[opp].includes(c.characterId) && !d.picks[opp].includes(c.characterId))
-          : d.decks[own].filter((c) => !d.bannedFrom[own].includes(c.characterId) && !d.picks[own].includes(c.characterId));
-      // Bane/escolhe preferencialmente os mais fortes, com bastante ruído (nem todo meta é banido).
-      candidates.sort((x, y) => power.get(y.characterId)! + rand() * 4 - (power.get(x.characterId)! + rand() * 4));
-      const pick = step.type === "BAN" ? candidates[Math.floor(rand() * Math.min(3, candidates.length))]! : candidates[0]!;
-      await performDraftAction(actor, room.id, { stepIndex: d.stepIndex, characterId: pick.characterId });
+      const immune = [d.immune.A, d.immune.B];
+      // Bane/escolhe preferencialmente os mais fortes, com bastante ruído (nem todo meta é banido);
+      // na janela do imune, prefere o imune. Sem opções, passa a vez.
+      const candidates = [...d.options].sort(
+        (x, y) => Number(immune.includes(y)) * 10 + power.get(y)! + rand() * 4 - (Number(immune.includes(x)) * 10 + power.get(x)! + rand() * 4),
+      );
+      const choice = step.type === "BAN" ? candidates[Math.floor(rand() * Math.min(3, candidates.length))] : candidates[0];
+      await performDraftAction(actor, room.id, { stepIndex: d.stepIndex, characterId: choice ?? null });
     }
 
     const view = await getMatchView(room.id, a);

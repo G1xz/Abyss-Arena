@@ -35,12 +35,20 @@ export function describeEvent(e: MatchView["events"][number]): string {
       return `${who} está pronto`;
     case "PLAYER_UNREADY":
       return `${who} cancelou a prontidão`;
+    case "SEATS_SWAPPED":
+      return `${who} trocou os lados (A ↔ B)`;
     case "DRAFT_STARTED":
-      return `Draft iniciado (tabela v${String(p.priceVersion ?? "?")})`;
+      return `Draft iniciado (tabela v${String(p.priceVersion ?? "?")})${p.immunity ? " com fase de imunidade" : ""}`;
+    case "DRAFT_IMMUNE":
+      return `${who} declarou ${String(p.characterName ?? "")} imune`;
     case "DRAFT_BAN":
       return `${who} baniu ${String(p.characterName ?? "")}`;
     case "DRAFT_PICK":
       return `${who} escolheu ${String(p.characterName ?? "")}`;
+    case "DRAFT_SKIP":
+      return `${who} passou a vez (sem opções válidas)`;
+    case "DRAFT_UNDO":
+      return `${who} desfez o pick de ${String(p.characterName ?? "")}`;
     case "DRAFT_LOCKED":
       return "Times travados";
     case "RESULT_SUBMITTED":

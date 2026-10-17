@@ -1,30 +1,45 @@
 /**
- * Motor de draft genérico, orientado por configuração. Funções puras: o servidor
- * reconstrói o estado a partir do snapshot dos decks + ações persistidas e valida
- * cada nova ação antes de gravá-la.
+ * Motor de draft orientado por configuração (regras em docs/REGRAS-COMPETITIVAS.md). Funções puras:
+ * o servidor reconstrói o estado a partir do snapshot dos decks + ações persistidas e valida cada
+ * nova ação antes de gravá-la.
  *
- * Semântica:
- *  - BAN de A remove um personagem do deck de B (e vice-versa).
- *  - PICK de A escolhe um personagem do próprio deck de A, ainda não banido nem escolhido.
- *  - Os dois times podem conter o mesmo personagem (cada jogador usa a própria conta);
- *    o mesmo personagem não pode aparecer duas vezes no mesmo time.
- *  - A sequência é declarativa e pode intercalar bans e picks.
+ * Fluxo: imunidade (condicional) → bans → picks.
+ *  - IMUNIDADE: só ocorre se os decks tiverem ao menos `minEligible` personagens em comum com a mesma
+ *    constelação. Cada jogador declara um imune (A e depois B), diferentes entre si. Imunes não podem
+ *    ser banidos e ficam disponíveis para os dois jogadores, mas só no 4º e no 8º pick individual.
+ *  - BAN: o alvo precisa estar no deck do oponente; o efeito é universal (some para os dois).
+ *  - PICK: do próprio deck. Personagens não imunes são exclusivos: escolhidos por um, somem para o outro.
+ *  - Passar: só quando o jogador não tem nenhuma opção válida no turno (evita travar o draft).
  */
 
 export type Seat = "A" | "B";
-export type DraftActionKind = "BAN" | "PICK";
+export type DraftStepKind = "IMMUNE" | "BAN" | "PICK";
+/** Tipo gravado em cada ação: o passo executado ou SKIP (sem opções válidas). */
+export type DraftActionKind = DraftStepKind | "SKIP";
 
 export interface DraftStep {
-  type: DraftActionKind;
+  type: DraftStepKind;
   actor: Seat;
+}
+
+export interface ImmunityConfig {
+  enabled: boolean;
+  /** Picks individuais (1 = primeiro pick do jogador) em que um imune pode ser escolhido. */
+  pickSlots: number[];
+  /** Personagens em comum (mesma constelação) necessários para haver a fase. */
+  minEligible: number;
 }
 
 export interface DraftConfig {
   bansPerPlayer: number;
   picksPerPlayer: number;
+  /** Bans e picks; a fase de imunidade é acrescentada no início quando se aplica. */
   sequence: DraftStep[];
-  /** Reservado para timer por turno (não aplicado no MVP). */
-  turnTimeoutSeconds?: number | null;
+  immunity?: ImmunityConfig | null;
+  /** Tempo de cada jogador para todo o draft (relógio de xadrez). Null = sem relógio. */
+  clockSeconds?: number | null;
+  /** Quantos "desfazer" cada jogador tem na partida. */
+  undoPerPlayer?: number;
 }
 
 export interface DraftDecks {
@@ -32,12 +47,16 @@ export interface DraftDecks {
   B: string[];
 }
 
+/** Constelação de cada personagem no deck de cada jogador (define a elegibilidade da imunidade). */
+export type DraftCopies = Record<Seat, Record<string, number>>;
+
 export interface DraftActionRecord {
   stepIndex: number;
   type: DraftActionKind;
   actorSeat: Seat;
   targetSeat: Seat;
-  characterId: string;
+  /** Null nas ações SKIP. */
+  characterId: string | null;
 }
 
 export const SEATS: readonly Seat[] = ["A", "B"];
@@ -46,25 +65,27 @@ export function opponentOf(seat: Seat): Seat {
   return seat === "A" ? "B" : "A";
 }
 
+export const DEFAULT_IMMUNITY: ImmunityConfig = { enabled: true, pickSlots: [4, 8], minEligible: 2 };
+
 export const DRAFT_PRESETS = {
-  /** Bans A-B-B-A, depois picks alternados A-B-A-B... */
-  BANS_FIRST_ALTERNATE: "Bans primeiro (A-B-B-A) e picks alternados",
-  /** Bans A-B-B-A, depois picks em serpente A-B-B-A-A-B... */
-  BANS_FIRST_SNAKE: "Bans primeiro (A-B-B-A) e picks em serpente",
+  /** Bans em serpente (A-B-B-A-A-B…) e picks em serpente (A-B-B-A ×4). Padrão competitivo. */
+  BANS_FIRST_SNAKE: "Bans e picks em serpente (A-B-B-A…)",
+  /** Bans em serpente, depois picks alternados A-B-A-B... */
+  BANS_FIRST_ALTERNATE: "Bans em serpente e picks alternados",
   /** Metade dos bans, metade dos picks, restante dos bans e picks. */
   INTERLEAVED: "Intercalado (fase de bans e picks em duas rodadas)",
 } as const;
 
 export type DraftPreset = keyof typeof DRAFT_PRESETS;
 
-function alternate(type: DraftActionKind, perPlayer: number, start: Seat = "A"): DraftStep[] {
+function alternate(type: DraftStepKind, perPlayer: number, start: Seat = "A"): DraftStep[] {
   const out: DraftStep[] = [];
   for (let i = 0; i < perPlayer * 2; i++) out.push({ type, actor: i % 2 === 0 ? start : opponentOf(start) });
   return out;
 }
 
 /** A-B-B-A-A-B-B-A... */
-function snake(type: DraftActionKind, perPlayer: number, start: Seat = "A"): DraftStep[] {
+function snake(type: DraftStepKind, perPlayer: number, start: Seat = "A"): DraftStep[] {
   const out: DraftStep[] = [];
   for (let i = 0; i < perPlayer * 2; i++) {
     const block = Math.floor((i + 1) / 2) % 2; // 0,1,1,0,0,1,1,...
@@ -104,7 +125,7 @@ export function parseSequence(text: string): DraftStep[] {
   return tokens.map((token) => {
     const m = STEP_RE.exec(token);
     if (!m) throw new Error(`Passo inválido na sequência: "${token}"`);
-    return { type: m[1] as DraftActionKind, actor: m[2] as Seat };
+    return { type: m[1] as DraftStepKind, actor: m[2] as Seat };
   });
 }
 
@@ -112,17 +133,48 @@ export function formatSequence(steps: DraftStep[]): string {
   return steps.map((s) => `${s.type}_PLAYER_${s.actor}`).join(", ");
 }
 
+/** Ordem compacta para leitura: "A → B → B → A". */
+export function formatOrder(steps: DraftStep[]): string {
+  return steps.map((s) => s.actor).join(" → ");
+}
+
+/** Resumo do formato para jogadores (página Jogar, lobby). */
+export function describeDraftFormat(config: DraftConfig): string[] {
+  const bans = config.sequence.filter((s) => s.type === "BAN");
+  const picks = config.sequence.filter((s) => s.type === "PICK");
+  const lines: string[] = [];
+  const immunity = config.immunity;
+  if (immunity?.enabled) {
+    lines.push(
+      `Imunidade (A → B), se os decks tiverem ${immunity.minEligible}+ personagens em comum com a mesma constelação. Imunes só no ${immunity.pickSlots.map((n) => `${n}º`).join(" ou ")} pick.`,
+    );
+  }
+  if (bans.length) lines.push(`${config.bansPerPlayer} bans por jogador, universais: ${formatOrder(bans)}.`);
+  lines.push(`${config.picksPerPlayer} picks por jogador, exclusivos: ${formatOrder(picks)}.`);
+  const extras = [
+    config.clockSeconds ? `${config.clockSeconds} s de relógio por jogador (continua negativo)` : null,
+    config.undoPerPlayer ? `${config.undoPerPlayer} desfazer por jogador` : null,
+  ].filter(Boolean);
+  if (extras.length) lines.push(`${extras.join(" · ")}.`);
+  return lines;
+}
+
 export function validateDraftConfig(config: DraftConfig): string[] {
   const errors: string[] = [];
   const { bansPerPlayer, picksPerPlayer, sequence } = config;
   if (!Number.isInteger(bansPerPlayer) || bansPerPlayer < 0 || bansPerPlayer > 10) errors.push("Bans por jogador deve estar entre 0 e 10.");
-  if (!Number.isInteger(picksPerPlayer) || picksPerPlayer < 1 || picksPerPlayer > 8) errors.push("Picks por jogador deve estar entre 1 e 8.");
-  const count = (type: DraftActionKind, actor: Seat) => sequence.filter((s) => s.type === type && s.actor === actor).length;
+  if (!Number.isInteger(picksPerPlayer) || picksPerPlayer < 1 || picksPerPlayer > 12) errors.push("Picks por jogador deve estar entre 1 e 12.");
+  if (sequence.some((s) => s.type === "IMMUNE")) errors.push("A fase de imunidade é automática; não a coloque na sequência.");
+  const count = (type: DraftStepKind, actor: Seat) => sequence.filter((s) => s.type === type && s.actor === actor).length;
   for (const seat of SEATS) {
     if (count("BAN", seat) !== bansPerPlayer) errors.push(`A sequência deve ter exatamente ${bansPerPlayer} ban(s) do jogador ${seat}.`);
     if (count("PICK", seat) !== picksPerPlayer) errors.push(`A sequência deve ter exatamente ${picksPerPlayer} pick(s) do jogador ${seat}.`);
   }
   if (sequence.length !== 2 * (bansPerPlayer + picksPerPlayer)) errors.push("A sequência contém passos extras.");
+  const slots = config.immunity?.enabled ? config.immunity.pickSlots : [];
+  if (slots.some((n) => !Number.isInteger(n) || n < 1 || n > picksPerPlayer)) errors.push(`Os picks dos imunes devem estar entre 1 e ${picksPerPlayer}.`);
+  if (new Set(slots).size !== slots.length) errors.push("Picks dos imunes repetidos.");
+  if (config.immunity?.enabled && slots.length === 0) errors.push("Informe em quais picks os imunes podem ser escolhidos.");
   return errors;
 }
 
@@ -131,81 +183,186 @@ export function minDeckSize(config: Pick<DraftConfig, "bansPerPlayer" | "picksPe
   return config.picksPerPlayer + config.bansPerPlayer;
 }
 
+/** Personagens elegíveis à imunidade: nos dois decks, com a mesma constelação (ordem do deck A). */
+export function immunityEligible(decks: DraftDecks, copies?: DraftCopies): string[] {
+  const inB = new Set(decks.B);
+  return decks.A.filter((id) => inB.has(id) && (copies?.A[id] ?? 0) === (copies?.B[id] ?? 0));
+}
+
+/** Sequência efetiva da partida: imunidade (quando se aplica) + bans e picks configurados. */
+export function effectiveSequence(config: DraftConfig, eligible: string[]): { sequence: DraftStep[]; immunityActive: boolean } {
+  const immunity = config.immunity;
+  const immunityActive = Boolean(immunity?.enabled && eligible.length >= Math.max(2, immunity.minEligible));
+  const sequence: DraftStep[] = immunityActive
+    ? [{ type: "IMMUNE", actor: "A" }, { type: "IMMUNE", actor: "B" }, ...config.sequence]
+    : config.sequence;
+  return { sequence, immunityActive };
+}
+
 export interface DraftState {
+  sequence: DraftStep[];
   stepIndex: number;
   totalSteps: number;
   isComplete: boolean;
   currentStep: DraftStep | null;
-  /** Personagens banidos do deck de cada jogador. */
+  immunityActive: boolean;
+  eligibleImmune: string[];
+  /** Imune declarado por cada jogador. */
+  immune: Record<Seat, string | null>;
+  /** Bans feitos por cada jogador. */
+  bans: Record<Seat, string[]>;
+  /** Bans que atingiram o deck de cada jogador (feitos pelo oponente). */
   bannedFrom: Record<Seat, string[]>;
-  /** Time de cada jogador. */
+  /** Todos os banidos (o efeito é universal). */
+  banned: string[];
+  /** Personagens escolhidos por cada jogador, em ordem. */
   picks: Record<Seat, string[]>;
-  /** O que cada jogador ainda pode escolher. */
-  pickable: Record<Seat, string[]>;
-  /** O que cada jogador ainda pode banir (do deck do oponente). */
-  bannable: Record<Seat, string[]>;
+  /** Turnos passados por falta de opções. */
+  skipped: Record<Seat, number>;
+  /** Escolhas válidas para o passo atual (vazio = só resta passar). */
+  options: string[];
+  /** Número do pick individual do jogador da vez (1 = primeiro), quando o passo é um pick. */
+  pickNumber: number | null;
 }
 
-export function computeDraftState(config: DraftConfig, decks: DraftDecks, actions: DraftActionRecord[]): DraftState {
+function pickNumberAt(sequence: DraftStep[], stepIndex: number): number {
+  const step = sequence[stepIndex]!;
+  return sequence.slice(0, stepIndex).filter((s) => s.type === "PICK" && s.actor === step.actor).length + 1;
+}
+
+export function computeDraftState(config: DraftConfig, decks: DraftDecks, actions: DraftActionRecord[], copies?: DraftCopies): DraftState {
+  const eligibleImmune = immunityEligible(decks, copies);
+  const { sequence, immunityActive } = effectiveSequence(config, eligibleImmune);
   const ordered = [...actions].sort((a, b) => a.stepIndex - b.stepIndex);
-  const bannedFrom: Record<Seat, string[]> = { A: [], B: [] };
+  const immune: Record<Seat, string | null> = { A: null, B: null };
+  const bans: Record<Seat, string[]> = { A: [], B: [] };
   const picks: Record<Seat, string[]> = { A: [], B: [] };
+  const skipped: Record<Seat, number> = { A: 0, B: 0 };
   for (const action of ordered) {
-    if (action.type === "BAN") bannedFrom[action.targetSeat].push(action.characterId);
-    else picks[action.targetSeat].push(action.characterId);
+    if (action.type === "SKIP" || !action.characterId) skipped[action.actorSeat]++;
+    else if (action.type === "IMMUNE") immune[action.actorSeat] = action.characterId;
+    else if (action.type === "BAN") bans[action.actorSeat].push(action.characterId);
+    else picks[action.actorSeat].push(action.characterId);
   }
-  const remaining = (seat: Seat) => decks[seat].filter((id) => !bannedFrom[seat].includes(id) && !picks[seat].includes(id));
   const stepIndex = ordered.length;
-  const isComplete = stepIndex >= config.sequence.length;
+  const isComplete = stepIndex >= sequence.length;
+  const currentStep = isComplete ? null : sequence[stepIndex]!;
+  const banned = [...bans.A, ...bans.B];
+  const immuneSet = new Set([immune.A, immune.B].filter((id): id is string => Boolean(id)));
+  const pickNumber = currentStep?.type === "PICK" ? pickNumberAt(sequence, stepIndex) : null;
+
+  let options: string[] = [];
+  if (currentStep) {
+    const actor = currentStep.actor;
+    const opp = opponentOf(actor);
+    if (currentStep.type === "IMMUNE") {
+      options = eligibleImmune.filter((id) => !immuneSet.has(id));
+    } else if (currentStep.type === "BAN") {
+      const taken = new Set([...banned, ...picks.A, ...picks.B]);
+      options = decks[opp].filter((id) => !immuneSet.has(id) && !taken.has(id));
+    } else {
+      const immuneSlot = immunityActive && (config.immunity?.pickSlots ?? []).includes(pickNumber!);
+      options = decks[actor].filter((id) => {
+        if (banned.includes(id) || picks[actor].includes(id)) return false;
+        if (immuneSet.has(id)) return immuneSlot;
+        return !picks[opp].includes(id);
+      });
+    }
+  }
+
   return {
+    sequence,
     stepIndex,
-    totalSteps: config.sequence.length,
+    totalSteps: sequence.length,
     isComplete,
-    currentStep: isComplete ? null : config.sequence[stepIndex]!,
-    bannedFrom,
+    currentStep,
+    immunityActive,
+    eligibleImmune,
+    immune,
+    bans,
+    bannedFrom: { A: bans.B, B: bans.A },
+    banned,
     picks,
-    pickable: { A: remaining("A"), B: remaining("B") },
-    bannable: { A: remaining("B"), B: remaining("A") },
+    skipped,
+    options,
+    pickNumber,
   };
 }
 
+export type DraftErrorCode = "DRAFT_COMPLETE" | "STALE_ACTION" | "NOT_YOUR_TURN" | "ILLEGAL_ACTION";
+
 export type DraftValidation =
-  | { ok: true; step: DraftStep; targetSeat: Seat; state: DraftState }
-  | { ok: false; code: "DRAFT_COMPLETE" | "STALE_ACTION" | "NOT_YOUR_TURN" | "ILLEGAL_ACTION"; message: string };
+  | { ok: true; type: DraftActionKind; step: DraftStep; targetSeat: Seat; state: DraftState }
+  | { ok: false; code: DraftErrorCode; message: string };
+
+/** Motivo de uma escolha inválida, para mensagens claras ao jogador. */
+function illegalReason(config: DraftConfig, state: DraftState, decks: DraftDecks, step: DraftStep, characterId: string): string {
+  const actor = step.actor;
+  const opp = opponentOf(actor);
+  const immune = [state.immune.A, state.immune.B];
+  if (step.type === "IMMUNE") {
+    if (!state.eligibleImmune.includes(characterId)) return "Só personagens dos dois decks com a mesma constelação podem ser imunes.";
+    return "Esse personagem já foi declarado imune.";
+  }
+  if (step.type === "BAN") {
+    if (!decks[opp].includes(characterId)) return "Esse personagem não está no deck do oponente.";
+    if (immune.includes(characterId)) return "Personagens imunes não podem ser banidos.";
+    if (state.banned.includes(characterId)) return "Esse personagem já foi banido.";
+    return "Não é possível banir um personagem já escolhido.";
+  }
+  if (!decks[actor].includes(characterId)) return "Esse personagem não está no seu deck.";
+  if (state.banned.includes(characterId)) return "Esse personagem foi banido.";
+  if (state.picks[actor].includes(characterId)) return "Esse personagem já está no seu time.";
+  if (immune.includes(characterId)) {
+    const slots = (config.immunity?.pickSlots ?? []).map((n) => `${n}º`).join(" ou ");
+    return `Imunes só podem ser escolhidos no ${slots} pick.`;
+  }
+  return "O oponente já escolheu esse personagem.";
+}
 
 export function validateDraftAction(
   config: DraftConfig,
   decks: DraftDecks,
   actions: DraftActionRecord[],
-  input: { actorSeat: Seat; stepIndex: number; characterId: string },
+  input: { actorSeat: Seat; stepIndex: number; characterId: string | null },
+  copies?: DraftCopies,
 ): DraftValidation {
-  const state = computeDraftState(config, decks, actions);
+  const state = computeDraftState(config, decks, actions, copies);
   if (state.isComplete) return { ok: false, code: "DRAFT_COMPLETE", message: "O draft já foi concluído." };
   if (input.stepIndex !== state.stepIndex) {
     return { ok: false, code: "STALE_ACTION", message: "Ação fora de sincronia com o turno atual. O estado foi atualizado." };
   }
   const step = state.currentStep!;
   if (step.actor !== input.actorSeat) return { ok: false, code: "NOT_YOUR_TURN", message: "Não é o seu turno." };
+  const targetSeat = step.type === "BAN" ? opponentOf(step.actor) : step.actor;
 
-  if (step.type === "BAN") {
-    const target = opponentOf(input.actorSeat);
-    if (!decks[target].includes(input.characterId)) {
-      return { ok: false, code: "ILLEGAL_ACTION", message: "Esse personagem não está no deck do oponente." };
-    }
-    if (!state.bannable[input.actorSeat].includes(input.characterId)) {
-      return { ok: false, code: "ILLEGAL_ACTION", message: "Esse personagem já foi banido ou escolhido." };
-    }
-    return { ok: true, step, targetSeat: target, state };
+  if (input.characterId === null) {
+    if (state.options.length > 0) return { ok: false, code: "ILLEGAL_ACTION", message: "Você ainda tem opções válidas neste turno." };
+    return { ok: true, type: "SKIP", step, targetSeat, state };
   }
+  if (!state.options.includes(input.characterId)) {
+    return { ok: false, code: "ILLEGAL_ACTION", message: illegalReason(config, state, decks, step, input.characterId) };
+  }
+  return { ok: true, type: step.type, step, targetSeat, state };
+}
 
-  if (!decks[input.actorSeat].includes(input.characterId)) {
-    return { ok: false, code: "ILLEGAL_ACTION", message: "Esse personagem não está no seu deck." };
-  }
-  if (state.bannedFrom[input.actorSeat].includes(input.characterId)) {
-    return { ok: false, code: "ILLEGAL_ACTION", message: "Esse personagem foi banido pelo oponente." };
-  }
-  if (state.picks[input.actorSeat].includes(input.characterId)) {
-    return { ok: false, code: "ILLEGAL_ACTION", message: "Esse personagem já está no seu time." };
-  }
-  return { ok: true, step, targetSeat: input.actorSeat, state };
+/** Desfazer: só o último pick confirmado do jogador, enquanto ele for a última ação do draft. */
+export function canUndo(config: DraftConfig, actions: DraftActionRecord[], seat: Seat, undosUsed: number): boolean {
+  if (undosUsed >= (config.undoPerPlayer ?? 0)) return false;
+  const last = actions.reduce<DraftActionRecord | null>((acc, a) => (!acc || a.stepIndex > acc.stepIndex ? a : acc), null);
+  return Boolean(last && last.type === "PICK" && last.actorSeat === seat);
+}
+
+/** Tempo restante no relógio do jogador (pode ser negativo). */
+export function clockRemainingMs(limitMs: number, usedMs: number, runningSince: number | null, now: number): number {
+  return limitMs - usedMs - (runningSince === null ? 0 : Math.max(0, now - runningSince));
+}
+
+/** "4:59", "0:05", "-0:12". */
+export function formatClock(ms: number): string {
+  const negative = ms < 0;
+  const total = Math.floor(Math.abs(ms) / 1000) + (negative && Math.abs(ms) % 1000 ? 1 : 0);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${negative ? "-" : ""}${minutes}:${String(seconds).padStart(2, "0")}`;
 }

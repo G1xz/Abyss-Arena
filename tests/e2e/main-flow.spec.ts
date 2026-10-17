@@ -10,21 +10,23 @@ import { E2E } from "../../playwright.config";
 
 const run = Date.now().toString(36).slice(-5);
 const PASSWORD = "senha-forte-123";
-// 6× 4★ em C6 (80 cada) + 4× 5★ em C0 (100 cada) = 880 pontos.
+// 7× 4★ em C6 (80 cada) + 4× 5★ em C0 (100 cada) = 960 pontos, 11 personagens (mínimo do formato).
+// Bennett e Xingqiu (C6) estão nos dois decks: há fase de imunidade.
 const A = {
   nick: `Alpha${run}`,
   email: `alpha${run}@e2e.local`,
-  fours: ["Bennett", "Xingqiu", "Xiangling", "Sucrose", "Fischl", "Beidou"],
+  fours: ["Bennett", "Xingqiu", "Xiangling", "Sucrose", "Fischl", "Beidou", "Chongyun"],
   fives: ["Furina", "Nahida", "Neuvillette", "Kaedehara Kazuha"],
 };
 const B = {
   nick: `Bravo${run}`,
   email: `bravo${run}@e2e.local`,
-  fours: ["Kuki Shinobu", "Yunjin", "Diona", "Rosaria", "Chevreuse", "Candace"],
+  fours: ["Kuki Shinobu", "Yunjin", "Diona", "Rosaria", "Chevreuse", "Bennett", "Xingqiu"],
   fives: ["Yelan", "Zhongli", "Shenhe", "Xiao"],
 };
-// Padrão: bans A-B-B-A e 8 picks por jogador em serpente.
-const SEQUENCE = ["A", "B", "B", "A", ...Array.from({ length: 16 }, (_, i) => (Math.floor((i + 1) / 2) % 2 === 0 ? "A" : "B"))] as ("A" | "B")[];
+const snake = (n: number) => Array.from({ length: n }, (_, i) => (Math.floor((i + 1) / 2) % 2 === 0 ? "A" : "B"));
+// Imunidade A-B, 3 bans por jogador (A-B-B-A-A-B) e 8 picks por jogador em serpente.
+const SEQUENCE = ["A", "B", ...snake(6), ...snake(16)] as ("A" | "B")[];
 
 /** Texto no formato copiado da página de personagens do HoYoLAB. */
 function hoyolabText(who: typeof A) {
@@ -42,10 +44,10 @@ async function register(page: Page, who: typeof A) {
 
 async function importRoster(page: Page, who: typeof A) {
   await page.getByTestId("roster-paste").fill(hoyolabText(who));
-  await expect(page.getByTestId("roster-preview")).toContainText("10 personagens reconhecidos");
+  await expect(page.getByTestId("roster-preview")).toContainText("11 personagens reconhecidos");
   await expect(page.getByTestId("roster-preview")).toContainText("1 ignorados");
   await page.getByTestId("roster-import").click();
-  await expect(page.getByTestId("roster-grid").locator('[data-testid^="roster-char-"]')).toHaveCount(10);
+  await expect(page.getByTestId("roster-grid").locator('[data-testid^="roster-char-"]')).toHaveCount(11);
 }
 
 async function buildDeck(page: Page, name: string, characters: string[], total: number) {
@@ -63,10 +65,17 @@ async function buildDeck(page: Page, name: string, characters: string[], total: 
   await expect(page.getByTestId("deck-card").filter({ hasText: name })).toContainText("válido");
 }
 
+/** Capturas para inspeção visual, só quando E2E_SHOTS_DIR estiver definido. */
+async function shot(page: Page, name: string) {
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/${name}.png` });
+}
+
+/** Seleciona a primeira opção válida (o imune, quando a janela do 4º/8º pick abre) e confirma. */
 async function act(page: Page) {
   const banner = page.getByTestId("turn-banner");
   await expect(banner).toHaveAttribute("data-my-turn", "true");
-  await page.locator('[data-state="bannable"], [data-state="pickable"]').first().click();
+  const immune = page.locator('[data-option="true"][data-immune="true"]');
+  await ((await immune.count()) ? immune : page.locator('[data-option="true"]')).first().click();
   await page.getByTestId("confirm-action").click();
 }
 
@@ -85,8 +94,8 @@ test("fluxo competitivo completo", async ({ browser }) => {
   // 3. Personagens importados do HoYoLAB (colar texto) e decks válidos dentro do orçamento.
   await importRoster(pageA, A);
   await importRoster(pageB, B);
-  await buildDeck(pageA, "Deck Alpha", [...A.fours, ...A.fives], 880);
-  await buildDeck(pageB, "Deck Bravo", [...B.fours, ...B.fives], 880);
+  await buildDeck(pageA, "Deck Alpha", [...A.fours, ...A.fives], 960);
+  await buildDeck(pageB, "Deck Bravo", [...B.fours, ...B.fives], 960);
 
   // 4. A desafia B pelo nickname (B está online: o convite chega em tempo real).
   await pageB.goto("/dashboard");
@@ -113,7 +122,9 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await pageA.getByTestId("start-draft").click();
   await expect(pageB.getByTestId("match-room")).toHaveAttribute("data-status", "BANNING");
 
-  // 7-9. Bans e picks sincronizados, alternando entre os navegadores.
+  // 7-9. Imunidade, bans e picks sincronizados, alternando entre os navegadores.
+  await expect(pageA.getByTestId("turn-banner")).toContainText("declare um personagem imune");
+  await expect(pageA.getByTestId("clock-A")).toContainText(/[45]:\d\d/);
   for (const [i, seat] of SEQUENCE.entries()) {
     const page = seat === "A" ? pageA : pageB;
     const other = seat === "A" ? pageB : pageA;
@@ -121,11 +132,14 @@ test("fluxo competitivo completo", async ({ browser }) => {
       // Jogador fora do turno não consegue agir.
       await expect(pageA.getByTestId("turn-banner")).toHaveAttribute("data-my-turn", "false");
     }
+    if (i === 0) await shot(page, "draft-imunidade");
+    if (i === 15) await shot(page, "draft-pick4-imune"); // 4º pick de A: janela do imune
     await act(page);
-    if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/20`);
+    if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/${SEQUENCE.length}`);
   }
   await expect(pageA.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
   await expect(pageB.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
+  await shot(pageA, "draft-travado");
   await expect(pageA.getByTestId("final-team-A").locator("img")).toHaveCount(8);
   await expect(pageB.getByTestId("final-team-B").locator("img")).toHaveCount(8);
 
@@ -195,10 +209,10 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await admin.reload();
   await expect(admin.getByText("Tabela vigente v2")).toBeVisible();
 
-  // 17. Histórico preservado: a partida mantém os custos congelados (880 pts nos dois decks),
+  // 17. Histórico preservado: a partida mantém os custos congelados (960 pts nos dois decks),
   // enquanto os decks salvos já são avaliados com a nova tabela; a v1 continua consultável.
   await pageA.goto(matchUrl);
-  await expect(pageA.getByText("(880 pts)")).toHaveCount(2);
+  await expect(pageA.getByText("(960 pts)")).toHaveCount(2);
   const deckTotal = async (page: Page) => {
     await page.goto("/decks");
     const text = await page.getByTestId("deck-card").first().locator("span.font-display").first().textContent();
@@ -206,7 +220,7 @@ test("fluxo competitivo completo", async ({ browser }) => {
   };
   const totals = [await deckTotal(pageA), await deckTotal(pageB)];
   // A proposta muda o custo base (C0); o efeito no deck depende da constelação na conta.
-  expect(totals.some((t) => t !== 880)).toBe(true);
+  expect(totals.some((t) => t !== 960)).toBe(true);
   await admin.goto("/admin/prices");
   await expect(admin.getByRole("link", { name: "v1" })).toBeVisible();
   await admin.getByRole("link", { name: "v2" }).click();

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PageContainer, PageHeader } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/misc";
-import { formatSequence } from "@/domain/draft";
+import { describeDraftFormat } from "@/domain/draft";
 import { formatDate } from "@/lib/utils";
 import { getCurrentCycle, halfLabel, toChallengeView } from "@/server/abyss/service";
 import { requireUser } from "@/server/auth/next";
@@ -68,10 +68,14 @@ export default async function PlayPage() {
               <span className="text-muted-foreground">Orçamento:</span> {settings.deckBudget} pontos · deck mínimo de{" "}
               {settings.draft.picksPerPlayer + settings.draft.bansPerPlayer} personagens
             </p>
-            <p>
-              <span className="text-muted-foreground">Draft:</span> {settings.draft.bansPerPlayer} bans e {settings.draft.picksPerPlayer} picks por jogador
-            </p>
-            <p className="font-mono text-xs break-words text-muted-foreground">{formatSequence(settings.draft.sequence)}</p>
+            <ul className="grid gap-1.5" data-testid="draft-format">
+              {describeDraftFormat(settings.draft).map((line) => (
+                <li key={line} className="flex gap-2">
+                  <span className="mt-2 size-1 shrink-0 rounded-full bg-gold" />
+                  {line}
+                </li>
+              ))}
+            </ul>
             {cycle && (
               <p>
                 <span className="text-muted-foreground">Abismo:</span> {cycle.name} ({formatDate(cycle.startsAt, false)} – {formatDate(cycle.endsAt, false)})
