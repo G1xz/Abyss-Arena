@@ -358,11 +358,13 @@ export function clockRemainingMs(limitMs: number, usedMs: number, runningSince: 
   return limitMs - usedMs - (runningSince === null ? 0 : Math.max(0, now - runningSince));
 }
 
-/** "4:59", "0:05", "-0:12". */
+/** "4:59", "0:05", "-0:12"; a partir de uma hora, "-1:05:03". */
 export function formatClock(ms: number): string {
   const negative = ms < 0;
   const total = Math.floor(Math.abs(ms) / 1000) + (negative && Math.abs(ms) % 1000 ? 1 : 0);
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return `${negative ? "-" : ""}${minutes}:${String(seconds).padStart(2, "0")}`;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  const sign = negative ? "-" : "";
+  return hours ? `${sign}${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${sign}${minutes}:${seconds}`;
 }

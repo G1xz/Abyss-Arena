@@ -241,5 +241,6 @@ describe("desfazer e relógio", () => {
     expect(formatClock(5_000)).toBe("0:05");
     expect(formatClock(-12_000)).toBe("-0:12");
     expect(formatClock(-61_500)).toBe("-1:02");
+    expect(formatClock(-3_903_000)).toBe("-1:05:03");
   });
 });

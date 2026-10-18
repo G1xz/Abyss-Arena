@@ -74,11 +74,19 @@ export function MatchRoom({ initial, me, decks }: { initial: MatchView; me: { id
 
   return (
     <div className={cn("mx-auto w-full px-4", drafting ? "max-w-[1600px] py-3" : "max-w-7xl py-6")} data-testid="match-room" data-status={state.status}>
-      <header className={cn("flex flex-wrap items-center gap-3", drafting ? "mb-3" : "mb-5")}>
-        <div>
-          <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Sala</p>
-          <p className={cn("font-mono font-bold tracking-[0.2em]", drafting ? "text-lg" : "text-2xl")}>{state.code}</p>
-        </div>
+      <header className={cn("flex flex-wrap items-center gap-3", drafting ? "mb-2" : "mb-5")}>
+        {drafting ? (
+          // Durante o draft, uma linha só: o tabuleiro precisa da altura.
+          <p className="flex items-baseline gap-2">
+            <span className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Sala</span>
+            <span className="font-mono text-lg font-bold tracking-[0.2em]">{state.code}</span>
+          </p>
+        ) : (
+          <div>
+            <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Sala</p>
+            <p className="font-mono text-2xl font-bold tracking-[0.2em]">{state.code}</p>
+          </div>
+        )}
         <MatchStatusBadge status={state.draft?.currentStep?.type === "IMMUNE" ? "IMMUNITY" : state.status} />
         <div className="flex items-center gap-2 text-sm">
           {(["A", "B"] as const).map((seat, i) => {

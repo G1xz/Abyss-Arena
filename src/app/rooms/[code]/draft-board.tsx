@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Ban, Check, Loader2, ShieldCheck, SkipForward, Swords, Timer, Undo2, X } from "lucide-react";
+import { Ban, Check, Diamond, Loader2, ShieldCheck, SkipForward, Swords, Timer, Undo2, X } from "lucide-react";
 import { ConstellationBadge, CostPill } from "@/components/character-card";
 import { Button } from "@/components/ui/button";
 import { ELEMENT_META, type ElementKey } from "@/domain/catalog";
 import { clockRemainingMs, formatClock, opponentOf, type DraftStepKind, type Seat } from "@/domain/draft";
+import { splashUrl } from "@/lib/character-art";
 import { cn } from "@/lib/utils";
 import type { DraftCharacterView, MatchView } from "@/server/matches/view";
 import { nick, type RoomContext } from "./shared";
@@ -19,6 +21,16 @@ const STEP_TONE: Record<DraftStepKind, { text: string; border: string; bg: strin
   BAN: { text: "text-ban", border: "border-ban/60", bg: "bg-ban/10", ring: "ring-ban" },
   PICK: { text: "text-pick", border: "border-pick/60", bg: "bg-pick/10", ring: "ring-pick" },
 };
+
+/**
+ * Largura das cápsulas (picks, imunes) e das menores (bans). Acompanha a largura e a altura da janela,
+ * para o draft inteiro (tabuleiro e personagens para escolher) caber numa tela só.
+ */
+const CAPSULE_VARS = {
+  "--cap": "clamp(38px, min(3.9vw, calc((100vh - 520px) / 4.8)), 72px)",
+  "--cap-md": "calc(var(--cap) * 0.84)",
+  "--cap-sm": "calc(var(--cap) * 0.66)",
+} as CSSProperties;
 
 /** Tempo restante dos dois relógios, atualizado em tempo real a partir do horário do servidor. */
 function useClocks(draft: Draft) {
@@ -42,8 +54,8 @@ function charactersById(draft: Draft) {
   return new Map([...draft.decks.A, ...draft.decks.B].map((c) => [c.characterId, c]));
 }
 
-/** Retrato compacto: ícone, custo, constelação/nível e marcações do draft. `fluid` ocupa a largura disponível. */
-function Portrait({ c, size, fluid, className, children }: { c: DraftCharacterView; size: number; fluid?: boolean; className?: string; children?: React.ReactNode }) {
+/** Ícone quadrado com custo, constelação/nível e marcações (personagens para escolher). */
+function Portrait({ c, size, fluid, className, children }: { c: DraftCharacterView; size: number; fluid?: boolean; className?: string; children?: ReactNode }) {
   const meta = ELEMENT_META[c.element as ElementKey];
   return (
     <span
@@ -67,25 +79,239 @@ function Portrait({ c, size, fluid, className, children }: { c: DraftCharacterVi
   );
 }
 
+/**
+ * Retrato em cápsula: arte de corpo inteiro recortada na vertical (ícone quadrado se a arte não existir).
+ * Vazia, mostra a legenda da vaga.
+ */
+function Capsule({
+  c,
+  small,
+  tone,
+  label,
+  highlight,
+  className,
+  children,
+}: {
+  c?: DraftCharacterView;
+  small?: boolean;
+  tone: "pick" | "ban" | "immune";
+  label?: string;
+  highlight?: string;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const [broken, setBroken] = useState(false);
+  const art = c && !broken ? splashUrl(c.iconUrl) : null;
+  const meta = c ? ELEMENT_META[c.element as ElementKey] : null;
+  const empty = tone === "ban" ? "border-ban/35 bg-ban/5" : tone === "immune" ? "border-gold/45 bg-gold/5" : "border-pick/30 bg-card/60";
+  return (
+    <div
+      className={cn(
+        "relative aspect-[5/12] shrink-0 overflow-hidden rounded-full border",
+        c ? "border-white/15 bg-gradient-to-b from-[#2c2a52] to-[#141634]" : cn("border-dashed", empty),
+        c && tone === "immune" && "border-gold/80 ring-1 ring-gold/60",
+        highlight,
+        className,
+      )}
+      style={{ width: small ? "var(--cap-sm)" : tone === "immune" ? "var(--cap-md)" : "var(--cap)" }}
+      title={c?.name}
+    >
+      {c ? (
+        <>
+          {/* Ícone por baixo: aparece enquanto a arte carrega ou se ela não existir. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.iconUrl ?? ""} alt={art ? "" : c.name} className={cn("absolute inset-x-0 top-1/2 w-full -translate-y-1/2 object-contain", tone === "ban" && "grayscale")} />
+          {art && (
+            <Image
+              src={art}
+              alt={c.name}
+              fill
+              // A arte é 2:1 e a cápsula ~5:12: a imagem renderizada tem cerca de 5× a largura da cápsula.
+              sizes={small ? "240px" : "360px"}
+              className={cn("object-cover", tone === "ban" && "opacity-70 grayscale")}
+              style={{ objectPosition: "50% 35%" }}
+              onError={() => setBroken(true)}
+            />
+          )}
+        </>
+      ) : (
+        <span className="absolute inset-0 grid place-items-center text-[10px] text-muted-foreground">{label}</span>
+      )}
+      {c && <span className="absolute inset-x-[30%] bottom-1.5 h-0.5 rounded-full" style={{ backgroundColor: meta?.color }} />}
+      {c && tone === "ban" && <Ban className="absolute inset-0 m-auto size-1/2 max-h-7 text-ban drop-shadow" />}
+      {c && !small && (
+        <ConstellationBadge constellation={c.constellation} level={null} rarity={c.rarity} className="absolute bottom-3 left-1/2 -translate-x-1/2 px-1 py-0 text-[9px]" />
+      )}
+      {children}
+    </div>
+  );
+}
+
 function SeatTag({ seat, className }: { seat: Seat; className?: string }) {
   return (
-    <span className={cn("grid size-4 place-items-center rounded-full text-[9px] font-bold", seat === "A" ? "bg-primary text-white" : "bg-gold text-black", className)}>
+    <span className={cn("grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold", seat === "A" ? "bg-primary text-white" : "bg-gold text-black", className)}>
       {seat}
     </span>
   );
 }
 
-function DeckPanel({
-  ctx,
-  seat,
-  candidate,
-  onSelect,
-}: {
-  ctx: RoomContext;
-  seat: Seat;
-  candidate: string | null;
-  onSelect: (id: string) => void;
-}) {
+function ClockChip({ ms, active, seat }: { ms: number | undefined; active: boolean; seat: Seat }) {
+  if (ms === undefined) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 font-mono text-sm font-semibold tabular-nums",
+        active ? "text-foreground" : "text-[oklch(0.78_0.12_250)]",
+        ms < 0 ? "text-ban" : ms < 30_000 && active ? "text-warning" : "",
+      )}
+      data-testid={`clock-${seat}`}
+    >
+      <Timer className="size-3.5" />
+      {formatClock(ms)}
+    </span>
+  );
+}
+
+/** Lateral de um jogador: nome e relógio, e os picks em duas fileiras de cápsulas desencontradas. */
+function SidePanel({ ctx, seat, align, clock }: { ctx: RoomContext; seat: Seat; align: "left" | "right"; clock: number | undefined }) {
+  const { state, online } = ctx;
+  const draft = state.draft!;
+  const byId = charactersById(draft);
+  const player = state.players[seat];
+  const active = draft.currentStep?.actor === seat;
+  const total = state.config.draft.picksPerPlayer;
+  const perRow = Math.ceil(total / 2);
+  const nextPick = active && draft.currentStep?.type === "PICK" ? draft.picks[seat].length : -1;
+  const rows = [Array.from({ length: perRow }, (_, i) => i), Array.from({ length: total - perRow }, (_, i) => perRow + i)];
+  const right = align === "right";
+
+  return (
+    <section className="grid min-w-0 content-start gap-2.5" data-testid={`team-${seat}`}>
+      <header
+        className={cn(
+          "flex items-center gap-2 rounded-md px-3 py-1.5",
+          right ? "flex-row-reverse border-r-4" : "border-l-4",
+          active ? "border-primary bg-primary/30" : "border-primary/40 bg-[oklch(0.3_0.1_268/0.6)]",
+        )}
+      >
+        <SeatTag seat={seat} />
+        <span className={cn("size-2 shrink-0 rounded-full", player && online.includes(player.userId) ? "bg-success" : "bg-muted-foreground/40")} />
+        <span className="min-w-0 truncate font-semibold">{nick(state, seat)}</span>
+        <span className={cn("flex-1", right ? "mr-1" : "ml-1")} />
+        <ClockChip ms={clock} active={active} seat={seat} />
+      </header>
+      <div className="grid gap-2">
+        {rows.map((row, r) => (
+          <div
+            key={r}
+            className={cn("flex gap-2", right && "flex-row-reverse")}
+            // Fileira de baixo deslocada meia cápsula para dentro, como no layout de transmissão.
+            style={r === 1 ? { [right ? "paddingRight" : "paddingLeft"]: "calc(var(--cap) * 0.6)" } : undefined}
+          >
+            {row.map((i) => {
+              const c = byId.get(draft.picks[seat][i] ?? "");
+              const immuneSlot = draft.immuneSlots.includes(i + 1);
+              return (
+                <div key={i} className="relative">
+                  <Capsule key={c?.characterId ?? `empty-${i}`} c={c} tone="pick" label={`${i + 1}º`} highlight={i === nextPick ? "ring-2 ring-pick" : undefined} />
+                  {immuneSlot && <ShieldCheck className="absolute -top-1 left-1/2 size-4 -translate-x-1/2 rounded-full bg-background p-0.5 text-gold" aria-label="Pick que aceita imune" />}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function UndoDots({ draft, seat, max }: { draft: Draft; seat: Seat; max: number }) {
+  if (!max) return null;
+  const left = draft.undo[seat].left;
+  return (
+    <div className="grid justify-items-center gap-0.5" title={`Desfazer: ${left} de ${max}`}>
+      <div className="flex gap-1">
+        {Array.from({ length: max }).map((_, i) => (
+          <span key={i} className={cn("size-3.5 rounded-full border", i < left ? "border-gold bg-gold/80" : "border-border bg-muted/40")} />
+        ))}
+      </div>
+      <span className="text-[9px] tracking-wider text-muted-foreground uppercase">Desfazer</span>
+    </div>
+  );
+}
+
+/** Centro: relógio da vez, desfazer de cada jogador, imunes e bans. */
+function CenterPanel({ ctx, order, clocks }: { ctx: RoomContext; order: Seat[]; clocks: Record<Seat, number> | null }) {
+  const { state } = ctx;
+  const draft = state.draft!;
+  const byId = charactersById(draft);
+  const step = draft.currentStep;
+  const next = draft.isComplete ? null : draft.sequence[draft.stepIndex + 1];
+  const [left, right] = order as [Seat, Seat];
+  const undoMax = state.config.draft.undoPerPlayer ?? 0;
+  const immunePair = (seat: Seat) => {
+    const other = opponentOf(seat);
+    return [draft.immune[seat], draft.immune[other]].map((id, i) => {
+      const c = byId.get(id ?? "");
+      const taken = Boolean(c && draft.picks[seat].includes(c.characterId));
+      return (
+        <div key={i} className="relative">
+          <Capsule key={c?.characterId ?? `immune-${i}`} c={c} tone="immune" label="Imune" highlight={taken ? "ring-2 ring-pick" : undefined} />
+          {taken && <Check className="absolute -top-1 left-1/2 size-4 -translate-x-1/2 rounded-full bg-pick p-0.5 text-black" aria-label={`Escolhido por ${nick(state, seat)}`} />}
+        </div>
+      );
+    });
+  };
+
+  return (
+    <section className="grid content-start justify-items-center gap-1.5" data-testid="bans-board">
+      <div className="flex w-full items-center gap-2 rounded-md bg-[oklch(0.92_0.02_270)] px-3 py-1.5 text-[#0a0f2c]" data-testid="turn-clock">
+        <Diamond className="size-3.5 fill-current opacity-50" />
+        <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold">
+          {draft.isComplete
+            ? "Draft concluído"
+            : `${nick(state, step!.actor)} · ${STEP_LABEL[step!.type]}${step!.type === "PICK" && draft.pickNumber ? ` ${draft.pickNumber}º` : ""}`}
+        </span>
+        {!draft.isComplete && clocks && <span className={cn("font-mono text-sm font-bold tabular-nums", clocks[step!.actor] < 0 && "text-red-700")}>{formatClock(clocks[step!.actor])}</span>}
+        <Diamond className="size-3.5 fill-current opacity-50" />
+      </div>
+      <div className="flex w-full items-start justify-between px-1">
+        <UndoDots draft={draft} seat={left} max={undoMax} />
+        {next && (
+          <span className="pt-0.5 text-center text-[10px] text-muted-foreground">
+            Depois: {nick(state, next.actor)} · {STEP_LABEL[next.type]}
+          </span>
+        )}
+        <UndoDots draft={draft} seat={right} max={undoMax} />
+      </div>
+
+      <p className="font-display text-sm leading-none font-bold tracking-wide text-gold">Imunes</p>
+      {draft.immunityActive ? (
+        <div className="flex w-full items-start justify-between gap-3" data-testid="immune-board">
+          <div className="flex gap-1.5">{immunePair(left)}</div>
+          <div className="flex flex-row-reverse gap-1.5">{immunePair(right)}</div>
+        </div>
+      ) : (
+        <p className="max-w-56 text-center text-xs text-muted-foreground">Sem imunidade nesta partida: os decks não têm 2 personagens em comum com a mesma constelação.</p>
+      )}
+
+      <p className="mt-1 font-display text-sm leading-none font-bold tracking-wide text-ban">Bans</p>
+      <div className="flex w-full items-start justify-between gap-3">
+        {[left, right].map((seat, side) => (
+          <div key={seat} className={cn("flex gap-1.5", side === 1 && "flex-row-reverse")}>
+            {Array.from({ length: state.config.draft.bansPerPlayer }).map((_, i) => {
+              const c = byId.get(draft.bans[seat][i] ?? "");
+              return <Capsule key={c?.characterId ?? `ban-${i}`} c={c} small tone="ban" />;
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Personagens para escolher (parte de baixo): o deck de cada jogador, com as opções da vez destacadas. */
+function DeckPanel({ ctx, seat, candidate, onSelect }: { ctx: RoomContext; seat: Seat; candidate: string | null; onSelect: (id: string) => void }) {
   const { state, mySeat } = ctx;
   const draft = state.draft!;
   const step = draft.currentStep;
@@ -104,7 +330,7 @@ function DeckPanel({
           {draft.deckNames[seat]} · <span className="text-gold">{draft.deckCosts[seat]} pts</span>
         </span>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(68px,1fr))] gap-1.5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(60px,1fr))] gap-1.5">
         {draft.decks[seat].map((c) => {
           const id = c.characterId;
           const banned = draft.banned.includes(id);
@@ -136,7 +362,7 @@ function DeckPanel({
             >
               <Portrait
                 c={c}
-                size={64}
+                size={60}
                 fluid
                 className={cn(banned && "opacity-40 grayscale", isImmune && "ring-2 ring-gold", !isImmune && eligible && "outline outline-1 outline-gold/60 outline-dashed")}
               >
@@ -144,7 +370,7 @@ function DeckPanel({
                 <ConstellationBadge constellation={c.constellation} level={c.level} rarity={c.rarity} className="absolute bottom-1 left-0.5 px-1 py-0 text-[9px]" />
                 {banned && (
                   <span className="absolute inset-0 grid place-items-center bg-ban/20">
-                    <Ban className="size-8 text-ban drop-shadow" strokeWidth={2.5} />
+                    <Ban className="size-7 text-ban drop-shadow" strokeWidth={2.5} />
                   </span>
                 )}
                 {(pickedBy.length > 0 || isImmune) && (
@@ -161,185 +387,12 @@ function DeckPanel({
                   </span>
                 )}
               </Portrait>
-              <span className="truncate px-0.5 text-[11px] leading-tight font-medium">{c.name}</span>
+              <span className="truncate px-0.5 text-[10px] leading-tight font-medium">{c.name}</span>
             </button>
           );
         })}
       </div>
     </section>
-  );
-}
-
-/** Ordem do draft em uma linha, separada por fase. */
-function Timeline({ draft, mySeat }: { draft: Draft; mySeat: Seat | null }) {
-  const byId = charactersById(draft);
-  const done = new Map(draft.actions.map((a) => [a.stepIndex, a]));
-  const phases = (["IMMUNE", "BAN", "PICK"] as DraftStepKind[])
-    .map((type) => ({ type, steps: draft.sequence.map((s, i) => ({ ...s, index: i })).filter((s) => s.type === type) }))
-    .filter((p) => p.steps.length);
-  return (
-    <ol className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1" aria-label="Sequência do draft" data-testid="draft-sequence">
-      {phases.map((phase) => (
-        <li key={phase.type} className="flex flex-wrap items-center gap-1">
-          <span className={cn("mr-0.5 text-[10px] font-semibold tracking-wider uppercase", STEP_TONE[phase.type].text)}>
-            {phase.type === "IMMUNE" ? "Imunes" : phase.type === "BAN" ? "Bans" : "Picks"}
-          </span>
-          {phase.steps.map((s) => {
-            const action = done.get(s.index);
-            const character = action?.characterId ? byId.get(action.characterId) : undefined;
-            const current = s.index === draft.stepIndex && !draft.isComplete;
-            return (
-              <span
-                key={s.index}
-                aria-current={current ? "step" : undefined}
-                title={`${STEP_LABEL[s.type]} ${s.actor}${character ? `: ${character.name}` : action ? ": passou" : ""}`}
-                className={cn(
-                  "relative grid size-6 place-items-center overflow-hidden rounded border text-[10px] font-bold",
-                  s.actor === "A" ? "border-primary/40" : "border-gold/40",
-                  current && cn("ring-2", STEP_TONE[s.type].ring),
-                  !action && !current && "opacity-50",
-                  s.actor === mySeat && !action && "bg-accent/40",
-                )}
-              >
-                {character ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={character.iconUrl ?? ""} alt="" className={cn("size-full object-cover", s.type === "BAN" && "grayscale")} />
-                ) : (
-                  <span className={s.actor === "A" ? "text-primary" : "text-gold"}>{action ? "–" : s.actor}</span>
-                )}
-              </span>
-            );
-          })}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function ClockChip({ ms, active, seat }: { ms: number | undefined; active: boolean; seat: Seat }) {
-  if (ms === undefined) return null;
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-sm font-semibold tabular-nums",
-        active ? "border-primary/60 bg-primary/15" : "border-border/70 text-muted-foreground",
-        ms < 0 ? "text-ban" : ms < 30_000 && active ? "text-warning" : "",
-      )}
-      data-testid={`clock-${seat}`}
-    >
-      <Timer className="size-3.5" />
-      {formatClock(ms)}
-    </span>
-  );
-}
-
-function PlayerHeader({ ctx, seat, clock, align }: { ctx: RoomContext; seat: Seat; clock: number | undefined; align: "left" | "right" }) {
-  const { state, online } = ctx;
-  const draft = state.draft!;
-  const player = state.players[seat];
-  const active = draft.currentStep?.actor === seat;
-  return (
-    <div className={cn("flex min-w-0 items-center gap-2", align === "right" && "flex-row-reverse text-right")}>
-      <SeatTag seat={seat} className="size-5 text-[11px]" />
-      <span className={cn("size-2 shrink-0 rounded-full", player && online.includes(player.userId) ? "bg-success" : "bg-muted-foreground/40")} />
-      <span className={cn("truncate font-semibold", active && "text-foreground", !active && "text-muted-foreground")}>{nick(state, seat)}</span>
-      <ClockChip ms={clock} active={active} seat={seat} />
-      {draft.undo[seat].left > 0 && (
-        <span className="shrink-0 text-[11px] text-muted-foreground" title="Desfazer restante">
-          <Undo2 className="inline size-3" /> {draft.undo[seat].left}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/** Vaga do tabuleiro. `fluid`: ocupa a coluna (picks); senão, 44 px sem legenda (bans e imunes, nome no title). */
-function Slot({ c, tone, label, fluid, className }: { c?: DraftCharacterView; tone: "pick" | "ban" | "immune"; label?: string; fluid?: boolean; className?: string }) {
-  const border = tone === "pick" ? "border-pick/40" : tone === "ban" ? "border-ban/40" : "border-gold/50";
-  return (
-    <div className={cn("flex shrink-0 flex-col items-center gap-0.5", fluid ? "w-full min-w-0" : "w-11", className)} title={c?.name}>
-      {c ? (
-        <Portrait
-          c={c}
-          size={44}
-          fluid={fluid}
-          className={cn(tone === "ban" && "opacity-60 grayscale", tone === "immune" && "ring-2 ring-gold", tone === "pick" && "ring-1 ring-pick/50")}
-        >
-          {tone === "ban" && <Ban className="absolute inset-0 m-auto size-6 text-ban" />}
-        </Portrait>
-      ) : (
-        <span
-          className={cn(
-            "grid place-items-center rounded-md border border-dashed text-[10px] text-muted-foreground",
-            fluid ? "aspect-square w-full text-xs" : "size-11",
-            border,
-          )}
-        >
-          {label}
-        </span>
-      )}
-      {fluid && <span className="w-full truncate text-center text-[10px] leading-tight text-muted-foreground">{c?.name ?? " "}</span>}
-    </div>
-  );
-}
-
-/** Parte de baixo: picks de cada jogador nas laterais, bans e imunes separados no centro. */
-function Board({ ctx, order }: { ctx: RoomContext; order: Seat[] }) {
-  const { state } = ctx;
-  const draft = state.draft!;
-  const cfg = state.config.draft;
-  const byId = charactersById(draft);
-  const get = (id: string | null | undefined) => (id ? byId.get(id) : undefined);
-
-  const picks = (seat: Seat, align: "left" | "right") => (
-    <div className="grid min-w-0 gap-1.5" data-testid={`team-${seat}`}>
-      <p className={cn("text-xs font-semibold tracking-wider text-pick uppercase", align === "right" && "lg:text-right")}>
-        Picks · {nick(state, seat)}
-      </p>
-      {/* Do lado direito, o 1º pick fica na borda (espelhado), como nos decks acima. */}
-      <div className={cn("grid w-full max-w-[720px] grid-cols-4 gap-2 sm:grid-cols-8", align === "right" && "lg:ml-auto lg:[direction:rtl]")}>
-        {Array.from({ length: cfg.picksPerPlayer }).map((_, i) => {
-          const immuneSlot = draft.immuneSlots.includes(i + 1);
-          return (
-            <div key={i} className="relative min-w-0 [direction:ltr]">
-              <Slot c={get(draft.picks[seat][i])} tone="pick" label={`${i + 1}º`} fluid />
-              {immuneSlot && <ShieldCheck className="absolute -top-1 -right-1 size-4 rounded-full bg-background p-0.5 text-gold" aria-label="Pick que aceita imune" />}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="grid items-start gap-4 rounded-xl border bg-card/60 p-3 lg:grid-cols-[1fr_auto_1fr]">
-      {picks(order[0]!, "left")}
-      {/* Bans de cada jogador numa linha e, ao lado, o imune que ele declarou. */}
-      <div className="grid content-start gap-1.5 justify-self-center rounded-lg border border-ban/25 bg-ban/5 p-2" data-testid="bans-board">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase">
-          <span className="w-4" />
-          <span className="text-center text-ban" style={{ width: cfg.bansPerPlayer * 44 + (cfg.bansPerPlayer - 1) * 6 }}>
-            Bans
-          </span>
-          {draft.immunityActive && <span className="ml-3 w-11 text-center text-gold">Imune</span>}
-        </div>
-        {order.map((seat) => (
-          <div key={seat} className="flex items-center gap-1.5">
-            <SeatTag seat={seat} />
-            {Array.from({ length: cfg.bansPerPlayer }).map((_, i) => (
-              <Slot key={i} c={get(draft.bans[seat][i])} tone="ban" />
-            ))}
-            {draft.immunityActive && (
-              <>
-                <span className="mx-1 h-8 w-px bg-gold/30" aria-hidden />
-                <Slot c={get(draft.immune[seat])} tone="immune" className="" />
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      {picks(order[1]!, "right")}
-    </div>
   );
 }
 
@@ -386,22 +439,17 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
   const tone = step ? STEP_TONE[step.type] : null;
 
   return (
-    <div className="grid gap-3" data-testid="draft-board">
-      <div className="grid items-center gap-3 rounded-xl border bg-card/60 px-3 py-2 lg:grid-cols-[1fr_auto_1fr]">
-        <PlayerHeader ctx={ctx} seat={order[0]!} clock={clocks?.[order[0]!]} align="left" />
-        <Timeline draft={draft} mySeat={mySeat} />
-        <PlayerHeader ctx={ctx} seat={order[1]!} clock={clocks?.[order[1]!]} align="right" />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        {order.map((seat) => (
-          <DeckPanel key={seat} ctx={ctx} seat={seat} candidate={selection} onSelect={setCandidate} />
-        ))}
+    <div className="grid gap-3" data-testid="draft-board" style={CAPSULE_VARS}>
+      {/* Tabuleiro: picks nas laterais, imunes e bans no centro. */}
+      <div className="grid items-start gap-4 rounded-xl border bg-[oklch(0.24_0.08_268/0.55)] p-3 lg:grid-cols-[1fr_minmax(250px,320px)_1fr]">
+        <SidePanel ctx={ctx} seat={order[0]!} align="left" clock={clocks?.[order[0]!]} />
+        <CenterPanel ctx={ctx} order={order} clocks={clocks} />
+        <SidePanel ctx={ctx} seat={order[1]!} align="right" clock={clocks?.[order[1]!]} />
       </div>
 
       <div
         className={cn(
-          "flex min-h-14 flex-wrap items-center gap-3 rounded-xl border px-4 py-2",
+          "flex min-h-12 flex-wrap items-center gap-3 rounded-xl border px-4 py-2",
           draft.isComplete ? "border-success/40 bg-success/10" : myTurn && tone ? cn(tone.border, tone.bg) : "bg-card/60",
         )}
         data-testid="turn-banner"
@@ -438,14 +486,14 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
           <div className="flex items-center gap-2" data-testid="confirm-bar">
             {selected ? (
               <>
-                <Portrait c={selected} size={32} />
+                <Portrait c={selected} size={30} />
                 <span className="max-w-40 truncate text-sm font-medium">{selected.name}</span>
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setCandidate(null)} aria-label="Limpar seleção">
                   <X />
                 </Button>
               </>
             ) : (
-              <span className="text-xs text-muted-foreground">Selecione um personagem</span>
+              <span className="text-xs text-muted-foreground">Selecione um personagem abaixo</span>
             )}
             <Button
               size="sm"
@@ -461,7 +509,12 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
         )}
       </div>
 
-      <Board ctx={ctx} order={order} />
+      {/* Personagens para escolher. */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {order.map((seat) => (
+          <DeckPanel key={seat} ctx={ctx} seat={seat} candidate={selection} onSelect={setCandidate} />
+        ))}
+      </div>
     </div>
   );
 }

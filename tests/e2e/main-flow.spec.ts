@@ -133,7 +133,12 @@ test("fluxo competitivo completo", async ({ browser }) => {
       await expect(pageA.getByTestId("turn-banner")).toHaveAttribute("data-my-turn", "false");
     }
     if (i === 0) await shot(page, "draft-imunidade");
-    if (i === 15) await shot(page, "draft-pick4-imune"); // 4º pick de A: janela do imune
+    if (i === 15) {
+      await shot(page, "draft-pick4-imune"); // 4º pick de A: janela do imune
+      // Tabuleiro e personagens para escolher cabem na tela (1280×720).
+      const bottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll('[data-testid^="deck-panel-"]')].map((p) => p.getBoundingClientRect().bottom)));
+      expect(bottom).toBeLessThanOrEqual(page.viewportSize()!.height);
+    }
     await act(page);
     if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/${SEQUENCE.length}`);
   }
