@@ -16,6 +16,17 @@ import { nick, type RoomContext } from "./shared";
 type Draft = NonNullable<MatchView["draft"]>;
 
 const STEP_LABEL: Record<DraftStepKind, string> = { IMMUNE: "Imune", BAN: "Ban", PICK: "Pick" };
+const STEP_PLURAL: Record<DraftStepKind, string> = { IMMUNE: "imunes", BAN: "bans", PICK: "picks" };
+
+/** "Pick 3º e 4º", "Ban ×2", "Imune": o que o jogador da vez faz agora. */
+function turnLabel(draft: Draft): string {
+  const step = draft.currentStep!;
+  const size = draft.run.size;
+  if (step.type === "PICK" && draft.pickNumber) {
+    return size > 1 ? `Pick ${draft.pickNumber}º e ${draft.pickNumber + size - 1}º` : `Pick ${draft.pickNumber}º`;
+  }
+  return size > 1 ? `${STEP_LABEL[step.type]} ×${size}` : STEP_LABEL[step.type];
+}
 const STEP_TONE: Record<DraftStepKind, { text: string; border: string; bg: string; ring: string }> = {
   IMMUNE: { text: "text-gold", border: "border-gold/60", bg: "bg-gold/10", ring: "ring-gold" },
   BAN: { text: "text-ban", border: "border-ban/60", bg: "bg-ban/10", ring: "ring-ban" },
@@ -181,7 +192,9 @@ function SidePanel({ ctx, seat, align, clock }: { ctx: RoomContext; seat: Seat; 
   const active = draft.currentStep?.actor === seat;
   const total = state.config.draft.picksPerPlayer;
   const perRow = Math.ceil(total / 2);
+  // Vagas da vez (as duas, na vez dupla) ficam destacadas.
   const nextPick = active && draft.currentStep?.type === "PICK" ? draft.picks[seat].length : -1;
+  const isNext = (i: number) => nextPick >= 0 && i >= nextPick && i < nextPick + draft.run.size;
   const rows = [Array.from({ length: perRow }, (_, i) => i), Array.from({ length: total - perRow }, (_, i) => perRow + i)];
   const right = align === "right";
 
@@ -213,7 +226,7 @@ function SidePanel({ ctx, seat, align, clock }: { ctx: RoomContext; seat: Seat; 
               const immuneSlot = draft.immuneSlots.includes(i + 1);
               return (
                 <div key={i} className="relative">
-                  <Capsule key={c?.characterId ?? `empty-${i}`} c={c} tone="pick" label={`${i + 1}º`} highlight={i === nextPick ? "ring-2 ring-pick" : undefined} />
+                  <Capsule key={c?.characterId ?? `empty-${i}`} c={c} tone="pick" label={`${i + 1}º`} highlight={isNext(i) ? "ring-2 ring-pick" : undefined} />
                   {immuneSlot && <ShieldCheck className="absolute -top-1 left-1/2 size-4 -translate-x-1/2 rounded-full bg-background p-0.5 text-gold" aria-label="Pick que aceita imune" />}
                 </div>
               );
@@ -246,7 +259,8 @@ function CenterPanel({ ctx, order, clocks }: { ctx: RoomContext; order: Seat[]; 
   const draft = state.draft!;
   const byId = charactersById(draft);
   const step = draft.currentStep;
-  const next = draft.isComplete ? null : draft.sequence[draft.stepIndex + 1];
+  // Depois da vez atual inteira (as duas escolhas, na vez dupla).
+  const next = draft.isComplete ? null : draft.sequence[draft.stepIndex + draft.run.size];
   const [left, right] = order as [Seat, Seat];
   const undoMax = state.config.draft.undoPerPlayer ?? 0;
   const immunePair = (seat: Seat) => {
@@ -268,9 +282,7 @@ function CenterPanel({ ctx, order, clocks }: { ctx: RoomContext; order: Seat[]; 
       <div className="flex w-full items-center gap-2 rounded-md bg-[oklch(0.92_0.02_270)] px-3 py-1.5 text-[#0a0f2c]" data-testid="turn-clock">
         <Diamond className="size-3.5 fill-current opacity-50" />
         <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold">
-          {draft.isComplete
-            ? "Draft concluído"
-            : `${nick(state, step!.actor)} · ${STEP_LABEL[step!.type]}${step!.type === "PICK" && draft.pickNumber ? ` ${draft.pickNumber}º` : ""}`}
+          {draft.isComplete ? "Draft concluído" : `${nick(state, step!.actor)} · ${turnLabel(draft)}`}
         </span>
         {!draft.isComplete && clocks && <span className={cn("font-mono text-sm font-bold tabular-nums", clocks[step!.actor] < 0 && "text-red-700")}>{formatClock(clocks[step!.actor])}</span>}
         <Diamond className="size-3.5 fill-current opacity-50" />
@@ -311,14 +323,14 @@ function CenterPanel({ ctx, order, clocks }: { ctx: RoomContext; order: Seat[]; 
 }
 
 /** Personagens para escolher (parte de baixo): o deck de cada jogador, com as opções da vez destacadas. */
-function DeckPanel({ ctx, seat, candidate, onSelect }: { ctx: RoomContext; seat: Seat; candidate: string | null; onSelect: (id: string) => void }) {
+function DeckPanel({ ctx, seat, candidates, onSelect }: { ctx: RoomContext; seat: Seat; candidates: string[]; onSelect: (id: string) => void }) {
   const { state, mySeat } = ctx;
   const draft = state.draft!;
   const step = draft.currentStep;
   const myTurn = Boolean(step && mySeat && step.actor === mySeat);
   // Em qual deck o jogador da vez escolhe: ban no deck do oponente; imune e pick no próprio.
   const actingDeck = step ? (step.type === "BAN" ? opponentOf(step.actor) : step.actor) : null;
-  const options = new Set(seat === actingDeck ? draft.options : []);
+  const options = new Set(seat === actingDeck ? draft.run.options : []);
   const immune = [draft.immune.A, draft.immune.B];
   const title = mySeat ? (seat === mySeat ? "Seu deck" : `Deck de ${nick(state, seat)}`) : `Deck de ${nick(state, seat)} (${seat})`;
 
@@ -338,7 +350,7 @@ function DeckPanel({ ctx, seat, candidate, onSelect }: { ctx: RoomContext; seat:
           const isImmune = immune.includes(id);
           const eligible = draft.immunityActive && draft.eligibleImmune.includes(id);
           const clickable = myTurn && options.has(id);
-          const selected = clickable && candidate === id;
+          const selected = clickable && candidates.includes(id);
           const dim = Boolean(step) && myTurn && !clickable && !banned && pickedBy.length === 0 && !isImmune;
           const tone = step ? STEP_TONE[step.type] : null;
           return (
@@ -348,7 +360,8 @@ function DeckPanel({ ctx, seat, candidate, onSelect }: { ctx: RoomContext; seat:
               disabled={!clickable}
               onClick={() => onSelect(id)}
               data-testid={`draft-char-${seat}-${id}`}
-              data-state={banned ? "banned" : pickedBy.length ? "picked" : selected ? "selected" : clickable ? "option" : "default"}
+              // "Selecionado" vem primeiro: um imune já escolhido pelo oponente continua disponível.
+              data-state={selected ? "selected" : banned ? "banned" : pickedBy.length ? "picked" : clickable ? "option" : "default"}
               data-option={clickable ? "true" : undefined}
               data-immune={isImmune ? "true" : undefined}
               title={`${c.name} · ${c.cost} pts`}
@@ -399,43 +412,61 @@ function DeckPanel({ ctx, seat, candidate, onSelect }: { ctx: RoomContext; seat:
 export function DraftBoard({ ctx }: { ctx: RoomContext }) {
   const { state, mySeat, emit } = ctx;
   const draft = state.draft!;
-  const [candidate, setCandidate] = useState<string | null>(null);
+  // A seleção vale só para a vez em que foi feita (guardada junto com o passo).
+  const [pending, setPending] = useState<{ step: number; ids: string[] }>({ step: -1, ids: [] });
   const [sending, setSending] = useState<null | "confirm" | "undo" | "skip">(null);
   const clocks = useClocks(draft);
 
   const step = draft.currentStep;
   const myTurn = Boolean(step && mySeat && step.actor === mySeat);
   const byId = charactersById(draft);
-  // A seleção só vale para o passo em que foi feita.
-  const selection = candidate && myTurn && draft.options.includes(candidate) ? candidate : null;
-  const selected = selection ? byId.get(selection) : null;
+  const runSize = draft.run.size;
+  const selection = myTurn && pending.step === draft.stepIndex ? pending.ids.filter((id) => draft.run.options.includes(id)).slice(0, runSize) : [];
   const order: Seat[] = mySeat === "B" ? ["B", "A"] : ["A", "B"];
-  const immuneSlot = step?.type === "PICK" && draft.pickNumber !== null && draft.immuneSlots.includes(draft.pickNumber);
+  const immuneInRun =
+    step?.type === "PICK" && draft.pickNumber !== null && Array.from({ length: runSize }, (_, j) => draft.pickNumber! + j).some((n) => draft.immuneSlots.includes(n));
   const canUndo = Boolean(mySeat && draft.undo[mySeat].available);
+
+  // Imunes só cabem nos picks da janela (ex.: no 3º e 4º, só o 4º aceita imune).
+  const immuneIds = [draft.immune.A, draft.immune.B];
+  const immuneRoom = step?.type === "PICK" && draft.pickNumber ? Array.from({ length: runSize }, (_, j) => draft.pickNumber! + j).filter((n) => draft.immuneSlots.includes(n)).length : 0;
+
+  /** Na vez dupla, marca até dois; ao passar do limite, troca o último marcado. */
+  const toggle = (id: string) => {
+    if (!selection.includes(id) && immuneIds.includes(id) && selection.filter((x) => immuneIds.includes(x)).length >= immuneRoom) {
+      toast.info(`Nesta vez só cabe ${immuneRoom === 1 ? "um imune" : `${immuneRoom} imunes`} (no ${draft.immuneSlots.map((n) => `${n}º`).join(" ou ")} pick).`);
+      return;
+    }
+    const ids = selection.includes(id) ? selection.filter((x) => x !== id) : selection.length < runSize ? [...selection, id] : [...selection.slice(0, runSize - 1), id];
+    setPending({ step: draft.stepIndex, ids });
+  };
 
   const send = async (kind: "confirm" | "undo" | "skip") => {
     setSending(kind);
     const res =
       kind === "undo"
         ? await emit("match:undo")
-        : await emit("match:draftAction", { stepIndex: draft.stepIndex, characterId: kind === "skip" ? null : selection });
+        : kind === "skip"
+          ? await emit("match:draftAction", { stepIndex: draft.stepIndex, characterId: null })
+          : await emit("match:draftAction", { stepIndex: draft.stepIndex, characterIds: selection });
     setSending(null);
     if (!res.ok) toast.error(res.error);
-    setCandidate(null);
+    setPending({ step: -1, ids: [] });
   };
 
   const opp = mySeat ? nick(state, opponentOf(mySeat)) : "";
+  const picksText = step?.type === "PICK" && draft.pickNumber ? (runSize > 1 ? `os picks ${draft.pickNumber}º e ${draft.pickNumber + runSize - 1}º` : `o ${draft.pickNumber}º pick`) : "";
   const message = draft.isComplete
     ? "Draft concluído: times travados. Hora do Abismo!"
     : myTurn
-      ? draft.options.length === 0
+      ? draft.run.options.length === 0
         ? "Você não tem nenhuma opção válida neste turno: passe a vez."
         : step!.type === "IMMUNE"
           ? "Sua vez: declare um personagem imune (está nos dois decks, com a mesma constelação)."
           : step!.type === "BAN"
-            ? `Sua vez: bana um personagem do deck de ${opp} (o ban vale para os dois).`
-            : `Sua vez: escolha seu ${draft.pickNumber}º pick${immuneSlot ? " (pode ser um imune)" : ""}.`
-      : `Aguardando ${nick(state, step!.actor)} ${step!.type === "IMMUNE" ? "declarar o imune" : step!.type === "BAN" ? "banir" : `escolher o ${draft.pickNumber}º pick`}…`;
+            ? `Sua vez: bana ${runSize > 1 ? `${runSize} personagens` : "um personagem"} do deck de ${opp} (o ban vale para os dois).`
+            : `Sua vez: escolha ${picksText}${immuneInRun ? " (o imune vale no " + draft.immuneSlots.map((n) => `${n}º`).join(" e no ") + ")" : ""}.`
+      : `Aguardando ${nick(state, step!.actor)} ${step!.type === "IMMUNE" ? "declarar o imune" : step!.type === "BAN" ? (runSize > 1 ? `banir ${runSize}` : "banir") : `escolher ${picksText}`}…`;
   const tone = step ? STEP_TONE[step.type] : null;
 
   return (
@@ -454,6 +485,9 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
         )}
         data-testid="turn-banner"
         data-my-turn={myTurn ? "true" : "false"}
+        data-actor={step?.actor}
+        data-step={draft.stepIndex}
+        data-run={runSize}
       >
         {draft.isComplete ? (
           <Swords className="text-success" />
@@ -482,28 +516,36 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
             {sending === "skip" ? <Loader2 className="animate-spin" /> : <SkipForward />} Passar a vez
           </Button>
         )}
-        {myTurn && draft.options.length > 0 && (
-          <div className="flex items-center gap-2" data-testid="confirm-bar">
-            {selected ? (
+        {myTurn && draft.run.options.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2" data-testid="confirm-bar">
+            {selection.length ? (
               <>
-                <Portrait c={selected} size={30} />
-                <span className="max-w-40 truncate text-sm font-medium">{selected.name}</span>
-                <Button size="icon" variant="ghost" className="size-8" onClick={() => setCandidate(null)} aria-label="Limpar seleção">
-                  <X />
-                </Button>
+                {selection.map((id) => {
+                  const c = byId.get(id)!;
+                  return (
+                    <span key={id} className="flex items-center gap-1.5 rounded-md border bg-background/50 py-0.5 pr-1 pl-0.5">
+                      <Portrait c={c} size={26} />
+                      <span className="max-w-28 truncate text-sm font-medium">{c.name}</span>
+                      <button type="button" className="rounded p-0.5 text-muted-foreground hover:text-foreground" onClick={() => toggle(id)} aria-label={`Tirar ${c.name}`}>
+                        <X className="size-3.5" />
+                      </button>
+                    </span>
+                  );
+                })}
+                {selection.length < runSize && <span className="text-xs text-muted-foreground">+ {runSize - selection.length} para completar a vez</span>}
               </>
             ) : (
-              <span className="text-xs text-muted-foreground">Selecione um personagem abaixo</span>
+              <span className="text-xs text-muted-foreground">{runSize > 1 ? `Selecione até ${runSize} personagens abaixo` : "Selecione um personagem abaixo"}</span>
             )}
             <Button
               size="sm"
               variant={step!.type === "BAN" ? "destructive" : step!.type === "IMMUNE" ? "gold" : "default"}
-              disabled={!selection || sending !== null}
+              disabled={selection.length === 0 || sending !== null}
               onClick={() => send("confirm")}
               data-testid="confirm-action"
             >
               {sending === "confirm" ? <Loader2 className="animate-spin" /> : step!.type === "BAN" ? <Ban /> : step!.type === "IMMUNE" ? <ShieldCheck /> : <Check />}
-              Confirmar {STEP_LABEL[step!.type].toLowerCase()}
+              Confirmar {selection.length > 1 ? `${selection.length} ${STEP_PLURAL[step!.type]}` : STEP_LABEL[step!.type].toLowerCase()}
             </Button>
           </div>
         )}
@@ -512,7 +554,7 @@ export function DraftBoard({ ctx }: { ctx: RoomContext }) {
       {/* Personagens para escolher. */}
       <div className="grid gap-3 lg:grid-cols-2">
         {order.map((seat) => (
-          <DeckPanel key={seat} ctx={ctx} seat={seat} candidate={selection} onSelect={setCandidate} />
+          <DeckPanel key={seat} ctx={ctx} seat={seat} candidates={selection} onSelect={toggle} />
         ))}
       </div>
     </div>

@@ -24,9 +24,6 @@ const B = {
   fours: ["Kuki Shinobu", "Yunjin", "Diona", "Rosaria", "Chevreuse", "Bennett", "Xingqiu"],
   fives: ["Yelan", "Zhongli", "Shenhe", "Xiao"],
 };
-const snake = (n: number) => Array.from({ length: n }, (_, i) => (Math.floor((i + 1) / 2) % 2 === 0 ? "A" : "B"));
-// Imunidade A-B, 3 bans por jogador (A-B-B-A-A-B) e 8 picks por jogador em serpente.
-const SEQUENCE = ["A", "B", ...snake(6), ...snake(16)] as ("A" | "B")[];
 
 /** Texto no formato copiado da página de personagens do HoYoLAB. */
 function hoyolabText(who: typeof A) {
@@ -70,12 +67,23 @@ async function shot(page: Page, name: string) {
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/${name}.png` });
 }
 
-/** Seleciona a primeira opção válida (o imune, quando a janela do 4º/8º pick abre) e confirma. */
-async function act(page: Page) {
+/**
+ * Marca as opções da vez (as duas, na vez dupla; o imune primeiro quando a janela do 4º/8º pick abre)
+ * e confirma uma vez só.
+ */
+async function act(page: Page, beforeConfirm?: () => Promise<void>) {
   const banner = page.getByTestId("turn-banner");
   await expect(banner).toHaveAttribute("data-my-turn", "true");
-  const immune = page.locator('[data-option="true"][data-immune="true"]');
-  await ((await immune.count()) ? immune : page.locator('[data-option="true"]')).first().click();
+  const size = Number(await banner.getAttribute("data-run"));
+  const immune = page.locator('[data-option="true"][data-immune="true"]:not([data-state="selected"])');
+  const common = page.locator('[data-option="true"]:not([data-immune="true"]):not([data-state="selected"])');
+  for (let k = 0; k < size; k++) {
+    // Um imune por vez (só um pick da vez aceita imune); o resto, personagens comuns.
+    const preferred = k === 0 ? immune : common;
+    await ((await preferred.count()) ? preferred : k === 0 ? common : immune).first().click();
+  }
+  await expect(page.locator('[data-state="selected"]')).toHaveCount(size);
+  await beforeConfirm?.();
   await page.getByTestId("confirm-action").click();
 }
 
@@ -122,26 +130,36 @@ test("fluxo competitivo completo", async ({ browser }) => {
   await pageA.getByTestId("start-draft").click();
   await expect(pageB.getByTestId("match-room")).toHaveAttribute("data-status", "BANNING");
 
-  // 7-9. Imunidade, bans e picks sincronizados, alternando entre os navegadores.
+  // 7-9. Imunidade, bans e picks sincronizados, alternando entre os navegadores; vez dupla em um clique.
   await expect(pageA.getByTestId("turn-banner")).toContainText("declare um personagem imune");
   await expect(pageA.getByTestId("clock-A")).toContainText(/[45]:\d\d/);
-  for (const [i, seat] of SEQUENCE.entries()) {
-    const page = seat === "A" ? pageA : pageB;
-    const other = seat === "A" ? pageB : pageA;
-    if (i === 1) {
-      // Jogador fora do turno não consegue agir.
-      await expect(pageA.getByTestId("turn-banner")).toHaveAttribute("data-my-turn", "false");
+  const room = pageA.getByTestId("match-room");
+  const bannerA = pageA.getByTestId("turn-banner");
+  let confirms = 0;
+  while ((await room.getAttribute("data-status")) !== "LOCKED") {
+    const step = (await bannerA.getAttribute("data-step"))!;
+    const page = (await bannerA.getAttribute("data-actor")) === "A" ? pageA : pageB;
+    if (confirms === 1) await expect(bannerA).toHaveAttribute("data-my-turn", "false"); // fora do turno não age
+    if (step === "0") await shot(page, "draft-imunidade");
+    await act(
+      page,
+      step === "11" // 3º e 4º picks de B: vez dupla com o imune (vale no 4º)
+        ? async () => {
+            await shot(page, "draft-vez-dupla");
+            // Tabuleiro e personagens para escolher cabem na tela (1280×720).
+            const bottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll('[data-testid^="deck-panel-"]')].map((p) => p.getBoundingClientRect().bottom)));
+            expect(bottom).toBeLessThanOrEqual(page.viewportSize()!.height);
+          }
+        : undefined,
+    );
+    confirms++;
+    await expect.poll(async () => (await room.getAttribute("data-status")) === "LOCKED" || (await bannerA.getAttribute("data-step")) !== step).toBe(true);
+    if ((await room.getAttribute("data-status")) !== "LOCKED") {
+      await expect(pageB.getByTestId("turn-banner")).toHaveAttribute("data-step", (await bannerA.getAttribute("data-step"))!);
     }
-    if (i === 0) await shot(page, "draft-imunidade");
-    if (i === 15) {
-      await shot(page, "draft-pick4-imune"); // 4º pick de A: janela do imune
-      // Tabuleiro e personagens para escolher cabem na tela (1280×720).
-      const bottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll('[data-testid^="deck-panel-"]')].map((p) => p.getBoundingClientRect().bottom)));
-      expect(bottom).toBeLessThanOrEqual(page.viewportSize()!.height);
-    }
-    await act(page);
-    if (i < SEQUENCE.length - 1) await expect(other.getByTestId("turn-banner")).toContainText(`Passo ${i + 2}/${SEQUENCE.length}`);
   }
+  // 24 passos em 17 vezes: as vezes duplas são confirmadas de uma vez.
+  expect(confirms).toBe(17);
   await expect(pageA.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
   await expect(pageB.getByTestId("match-room")).toHaveAttribute("data-status", "LOCKED");
   await shot(pageA, "draft-travado");

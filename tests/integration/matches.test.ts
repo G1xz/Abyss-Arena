@@ -182,6 +182,59 @@ describe("motor de draft no servidor", () => {
     expect(view.events.map((e) => e.type)).toEqual(expect.arrayContaining(["DRAFT_IMMUNE", "DRAFT_BAN", "DRAFT_PICK", "DRAFT_LOCKED"]));
   });
 
+  it("ordem em duas fases e vez dupla confirmada de uma vez", async () => {
+    const m = await startedMatch(world);
+    const order = (await getMatchView(m.matchId, m.a)).draft!.sequence.map((s) => `${s.type[0]}${s.actor}`).join(" ");
+    expect(order).toBe("IA IB BA BB BB BA PA PB PB PA PA PB PB PA BA BB PA PB PB PA PA PB PB PA");
+
+    const single = async () => {
+      const d = (await getMatchView(m.matchId, m.a)).draft!;
+      await performDraftAction(d.currentStep!.actor === "A" ? m.a : m.b, m.matchId, { stepIndex: d.stepIndex, characterId: d.options[0]! });
+    };
+    for (let i = 0; i < 3; i++) await single(); // imunidades + 1º ban de A
+    let d = (await getMatchView(m.matchId, m.b)).draft!;
+    expect(d.run.size).toBe(2);
+    await prisma.match.update({ where: { id: m.matchId }, data: { turnStartedAt: new Date(Date.now() - 20_000) } });
+    const before = d.clock!.usedMs.B;
+    await performDraftAction(m.b, m.matchId, { stepIndex: d.stepIndex, characterIds: d.run.options.slice(0, 2) });
+
+    d = (await getMatchView(m.matchId, m.b)).draft!;
+    expect(d.bans.B).toHaveLength(2);
+    expect(d.currentStep).toEqual({ type: "BAN", actor: "A" });
+    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(5);
+    // O tempo da vez dupla é debitado uma vez só.
+    expect(d.clock!.usedMs.B - before).toBeGreaterThanOrEqual(20_000);
+    expect(d.clock!.usedMs.B - before).toBeLessThan(25_000);
+    // Lote maior que a vez é recusado sem gravar nada.
+    await single(); // último ban de A na fase 1
+    await single(); // 1º pick de A
+    d = (await getMatchView(m.matchId, m.b)).draft!;
+    await expect(performDraftAction(m.b, m.matchId, { stepIndex: d.stepIndex, characterIds: d.run.options.slice(0, 3) })).rejects.toMatchObject({ code: "ILLEGAL_ACTION" });
+    expect(await prisma.draftAction.count({ where: { matchId: m.matchId } })).toBe(7);
+  });
+
+  it("vez dupla com o imune: o servidor coloca o imune no pick que aceita", async () => {
+    const m = await startedMatch(world);
+    // Até os 3º e 4º picks de B, sem usar imunes.
+    for (;;) {
+      const d = (await getMatchView(m.matchId, m.a)).draft!;
+      if (d.currentStep!.actor === "B" && d.currentStep!.type === "PICK" && d.pickNumber === 3) break;
+      const immune = [d.immune.A, d.immune.B];
+      await performDraftAction(d.currentStep!.actor === "A" ? m.a : m.b, m.matchId, {
+        stepIndex: d.stepIndex,
+        characterId: d.options.find((id) => !immune.includes(id))!,
+      });
+    }
+    const d = (await getMatchView(m.matchId, m.b)).draft!;
+    const immune = d.immune.A!;
+    const normal = d.options.find((id) => id !== immune)!;
+    expect(d.run.options).toContain(immune);
+    await performDraftAction(m.b, m.matchId, { stepIndex: d.stepIndex, characterIds: [immune, normal] });
+    const after = (await getMatchView(m.matchId, m.b)).draft!;
+    expect(after.picks.B.slice(-2)).toEqual([normal, immune]);
+    expect(after.currentStep!.actor).toBe("A");
+  });
+
   it("relógio: cada jogador gasta só o tempo dos próprios turnos", async () => {
     const m = await startedMatch(world);
     // Simula 40 s de reflexão de A antes de declarar o imune.
@@ -204,7 +257,8 @@ describe("motor de draft no servidor", () => {
       const actor = d.currentStep!.actor === "A" ? m.a : m.b;
       await performDraftAction(actor, m.matchId, { stepIndex: d.stepIndex, characterId: d.options[0]! });
     };
-    for (let i = 0; i < 8; i++) await step(); // 2 imunidades + 6 bans
+    // Imunidades e a primeira fase de bans.
+    while ((await getMatchView(m.matchId, m.a)).draft!.currentStep!.type !== "PICK") await step();
     await expect(undoDraftPick(m.a, m.matchId)).rejects.toMatchObject({ code: "INVALID_STATE" }); // ainda não há pick
     await step(); // 1º pick de A
     const picked = (await getMatchView(m.matchId, m.a)).draft!.picks.A[0]!;

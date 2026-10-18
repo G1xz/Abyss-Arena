@@ -7,10 +7,13 @@ import {
   immunityEligible,
   effectiveSequence,
   opponentOf,
+  planDraftBatch,
   validateDraftAction,
   type DraftActionRecord,
   type DraftCopies,
   type DraftDecks,
+  type DraftErrorCode,
+  type DraftState,
   type DraftStep,
 } from "@/domain/draft";
 import { Prisma, type Seat } from "@/generated/prisma/client";
@@ -356,11 +359,15 @@ export async function loadDraftContext(tx: Tx, matchId: string) {
   return { snapshots, decks, copies, actions: records };
 }
 
-export const draftActionSchema = z.object({
-  stepIndex: z.number().int().min(0).max(100),
-  /** Null = passar a vez (só aceito quando não há nenhuma opção válida). */
-  characterId: idSchema.nullable(),
-});
+export const draftActionSchema = z
+  .object({
+    stepIndex: z.number().int().min(0).max(100),
+    /** Null = passar a vez (só aceito quando não há nenhuma opção válida). */
+    characterId: idSchema.nullable().optional(),
+    /** Vez dupla (ex.: B B) confirmada de uma vez. */
+    characterIds: z.array(idSchema).min(1).max(4).optional(),
+  })
+  .refine((v) => (v.characterId === undefined) !== (v.characterIds === undefined), { message: "Informe o personagem (ou os personagens) da vez" });
 
 const EVENT_BY_TYPE = { IMMUNE: "DRAFT_IMMUNE", BAN: "DRAFT_BAN", PICK: "DRAFT_PICK", SKIP: "DRAFT_SKIP" } as const;
 
@@ -374,9 +381,9 @@ function characterName(snapshots: Awaited<ReturnType<typeof loadDraftContext>>["
 }
 
 /**
- * Aplica uma imunidade, ban, pick ou passe de forma atômica. O lock da linha da partida serializa ações
- * concorrentes; a chave única (matchId, stepIndex) é a segunda barreira contra escolhas simultâneas.
- * O tempo do turno é debitado do relógio de quem agiu.
+ * Aplica uma imunidade, ban, pick ou passe (ou a vez dupla inteira, com `characterIds`) de forma atômica.
+ * O lock da linha da partida serializa ações concorrentes; a chave única (matchId, stepIndex) é a segunda
+ * barreira contra escolhas simultâneas. O tempo do turno é debitado do relógio de quem agiu.
  */
 export async function performDraftAction(user: SessionUser, matchId: string, input: unknown, db: Db = prisma) {
   const data = parseInput(draftActionSchema, input);
@@ -388,42 +395,45 @@ export async function performDraftAction(user: SessionUser, matchId: string, inp
       requireStatus(match, DRAFT_STATUSES, "O draft não está em andamento");
       const config = readConfig(match);
       const ctx = await loadDraftContext(tx, matchId);
-      const result = validateDraftAction(
-        config.draft,
-        ctx.decks,
-        ctx.actions,
-        { actorSeat: seat, stepIndex: data.stepIndex, characterId: data.characterId },
-        ctx.copies,
-      );
-      if (!result.ok) {
-        throw new AppError(result.code === "DRAFT_COMPLETE" ? "INVALID_STATE" : result.code, result.message);
+      const fail = (code: DraftErrorCode, message: string) => new AppError(code === "DRAFT_COMPLETE" ? "INVALID_STATE" : code, message);
+
+      let planned: DraftActionRecord[];
+      let finalState: DraftState;
+      if (data.characterIds) {
+        const plan = planDraftBatch(config.draft, ctx.decks, ctx.actions, { actorSeat: seat, stepIndex: data.stepIndex, characterIds: data.characterIds }, ctx.copies);
+        if (!plan.ok) throw fail(plan.code, plan.message);
+        planned = plan.actions;
+        finalState = plan.state;
+      } else {
+        const characterId = data.characterId ?? null;
+        const result = validateDraftAction(config.draft, ctx.decks, ctx.actions, { actorSeat: seat, stepIndex: data.stepIndex, characterId }, ctx.copies);
+        if (!result.ok) throw fail(result.code, result.message);
+        planned = [{ stepIndex: data.stepIndex, type: result.type, actorSeat: seat, targetSeat: result.targetSeat, characterId }];
+        finalState = computeDraftState(config.draft, ctx.decks, [...ctx.actions, ...planned], ctx.copies);
       }
-      await tx.draftAction.create({
-        data: {
-          matchId,
-          stepIndex: data.stepIndex,
-          type: result.type,
-          actorSeat: seat,
-          targetSeat: result.targetSeat,
-          characterId: data.characterId,
-          actorUserId: user.id,
-        },
-      });
+
+      for (const action of planned) {
+        await tx.draftAction.create({
+          data: { matchId, stepIndex: action.stepIndex, type: action.type, actorSeat: seat, targetSeat: action.targetSeat, characterId: action.characterId, actorUserId: user.id },
+        });
+      }
       const now = new Date();
       await chargeClock(tx, match, seat, now);
-      const next = result.state.sequence[data.stepIndex + 1];
+      const next = finalState.currentStep ?? undefined;
       await bumpMatch(tx, matchId, {
-        currentStep: data.stepIndex + 1,
+        currentStep: finalState.stepIndex,
         status: statusFor(next),
         turnStartedAt: next ? now : null,
         ...(next ? {} : { lockedAt: now }),
       });
-      await recordEvent(tx, matchId, EVENT_BY_TYPE[result.type], user.id, {
-        seat,
-        stepIndex: data.stepIndex,
-        characterId: data.characterId,
-        characterName: characterName(ctx.snapshots, data.characterId),
-      });
+      for (const action of planned) {
+        await recordEvent(tx, matchId, EVENT_BY_TYPE[action.type], user.id, {
+          seat,
+          stepIndex: action.stepIndex,
+          characterId: action.characterId,
+          characterName: characterName(ctx.snapshots, action.characterId),
+        });
+      }
       if (!next) await recordEvent(tx, matchId, "DRAFT_LOCKED", null);
     });
   } catch (err) {

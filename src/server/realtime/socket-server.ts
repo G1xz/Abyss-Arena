@@ -138,8 +138,10 @@ export function attachSocketServer(httpServer: HttpServer) {
     on("match:setReady", (p, user) => setReady(user, p.matchId, p.ready === true));
     on("match:start", (p, user) => startDraft(user, p.matchId));
     on("match:swapSeats", (p, user) => swapSeats(user, p.matchId));
-    // characterId null = passar a vez (o servidor só aceita sem opções válidas).
-    on("match:draftAction", (p, user) => performDraftAction(user, p.matchId, { stepIndex: p.stepIndex, characterId: p.characterId }));
+    // characterId null = passar a vez (o servidor só aceita sem opções válidas); characterIds = vez dupla.
+    on("match:draftAction", (p, user) =>
+      performDraftAction(user, p.matchId, { stepIndex: p.stepIndex, characterId: p.characterId, characterIds: p.characterIds }),
+    );
     on("match:undo", (p, user) => undoDraftPick(user, p.matchId));
     on("match:cancel", (p, user) => cancelRoom(user, p.matchId));
     on("match:leave", (p, user) => leaveRoom(user, p.matchId));

@@ -47,11 +47,14 @@ O draft é totalmente público: imunidades, bans, picks, armas e consumo de orç
 
 ### Ordem e quantidade
 
-- Cada jogador faz **3 bans** e **8 picks**.
-- A ordem dos bans é: `A → B → B → A → A → B`.
-- A ordem dos picks é serpentine, repetida quatro vezes: `A → B → B → A`.
+- Cada jogador faz **3 bans** e **8 picks**, em duas fases:
+  1. **Bans, fase 1:** `A → B → B → A` (2 de cada).
+  2. **Picks, fase 1:** serpentine `A → BB → AA → BB → A` (4 de cada).
+  3. **Bans, fase 2:** `A → B` (mais 1 de cada, total de 6).
+  4. **Picks, fase 2:** de novo `A → BB → AA → BB → A` (mais 4 de cada).
 - Quando há fase de imunidade, ela ocorre antes dos bans: cada jogador declara um personagem imune, na ordem `A → B`.
-- Fluxo completo: **imunidade → bans → picks → armas → preparação → organização de times**.
+- **Vez dupla** (ex.: `BB`): o jogador seleciona os dois personagens e confirma uma vez só. Se um deles for imune, ele entra no pick que aceita imune (4º ou 8º).
+- Fluxo completo: **imunidade → bans → picks → bans → picks → armas → preparação → organização de times**.
 
 ### Imunidade
 

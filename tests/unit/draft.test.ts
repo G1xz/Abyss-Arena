@@ -9,9 +9,11 @@ import {
   effectiveSequence,
   formatClock,
   formatOrder,
+  formatTurns,
   immunityEligible,
   minDeckSize,
   parseSequence,
+  planDraftBatch,
   validateDraftAction,
   validateDraftConfig,
   type DraftActionRecord,
@@ -90,6 +92,71 @@ describe("formato e sequência", () => {
 
   it("resumo do formato para os jogadores", () => {
     expect(describeDraftFormat(config).join(" ")).toMatch(/Imunidade.*4º ou 8º.*3 bans por jogador.*8 picks por jogador.*300 s.*1 desfazer/);
+  });
+
+  it("padrão em duas fases: bans A-B-B-A, picks em serpente, bans A-B, picks em serpente", () => {
+    const split = buildSequence("SPLIT_SNAKE", 3, 8);
+    expect(validateDraftConfig({ ...config, sequence: split })).toEqual([]);
+    const phases = describeDraftFormat({ ...config, sequence: split }).find((l) => l.startsWith("Ordem"));
+    expect(phases).toBe(
+      "Ordem: bans A → BB → A · picks A → BB → AA → BB → A · bans A → B · picks A → BB → AA → BB → A. Na vez dupla, os dois personagens são escolhidos de uma vez.",
+    );
+    expect(formatTurns(split.slice(0, 4))).toBe("A → BB → A");
+  });
+});
+
+describe("vez dupla confirmada de uma vez", () => {
+  const split: DraftConfig = { ...config, sequence: buildSequence("SPLIT_SNAKE", 3, 8) };
+
+  /** Joga até o passo indicado com a primeira opção (preferindo não usar imunes). */
+  function upTo(stepIndex: number) {
+    const d = draft(split);
+    while (d.state().stepIndex < stepIndex) {
+      const s = d.state();
+      const immune = [s.immune.A, s.immune.B];
+      d.play(s.currentStep!.actor, s.options.find((id) => !immune.includes(id)) ?? s.options[0] ?? null);
+    }
+    return d;
+  }
+
+  it("B tem a vez dupla nos bans e nos picks", () => {
+    const d = upTo(3); // imunidade (2) + ban de A
+    expect(d.state().currentStep).toEqual({ type: "BAN", actor: "B" });
+    expect(d.state().run.size).toBe(2);
+    const p = upTo(7); // + bans B B A + 1º pick de A
+    expect(p.state().currentStep).toEqual({ type: "PICK", actor: "B" });
+    expect(p.state().run).toMatchObject({ size: 2 });
+  });
+
+  it("aplica os dois de uma vez, na ordem que for válida (imune vai para o 4º pick)", () => {
+    const d = upTo(11); // B: 3º e 4º picks (o 4º aceita imune)
+    const s = d.state();
+    expect(s.currentStep).toEqual({ type: "PICK", actor: "B" });
+    expect(s.pickNumber).toBe(3);
+    expect(s.run.options).toContain("s1"); // imune entra nas opções da vez (vale no 4º)
+    expect(s.options).not.toContain("s1"); // mas não no 3º sozinho
+    const normal = s.options.find((id) => id.startsWith("b"))!;
+    const plan = planDraftBatch(split, decks, d.actions(), { actorSeat: "B", stepIndex: 11, characterIds: ["s1", normal] }, copies);
+    expect(plan).toMatchObject({ ok: true });
+    if (!plan.ok) return;
+    expect(plan.actions.map((a) => [a.stepIndex, a.characterId])).toEqual([
+      [11, normal],
+      [12, "s1"],
+    ]);
+    expect(plan.state.picks.B.slice(-2)).toEqual([normal, "s1"]);
+    expect(plan.state.currentStep).toEqual({ type: "PICK", actor: "A" });
+  });
+
+  it("recusa mais escolhas que a vez, repetidas, fora do turno ou atrasadas", () => {
+    const d = upTo(7);
+    const [o1, o2, o3] = d.state().run.options;
+    const plan = (input: Partial<{ actorSeat: Seat; stepIndex: number; characterIds: string[] }>) =>
+      planDraftBatch(split, decks, d.actions(), { actorSeat: "B", stepIndex: 7, characterIds: [o1!, o2!], ...input }, copies);
+    expect(plan({ characterIds: [o1!, o2!, o3!] })).toMatchObject({ ok: false, message: "Nesta vez você escolhe até 2 personagens." });
+    expect(plan({ characterIds: [o1!, o1!] })).toMatchObject({ ok: false, code: "ILLEGAL_ACTION" });
+    expect(plan({ actorSeat: "A" })).toMatchObject({ ok: false, code: "NOT_YOUR_TURN" });
+    expect(plan({ stepIndex: 6 })).toMatchObject({ ok: false, code: "STALE_ACTION" });
+    expect(plan({ characterIds: [o1!] })).toMatchObject({ ok: true, actions: [{ stepIndex: 7 }] }); // pode confirmar um por vez
   });
 });
 

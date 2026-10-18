@@ -74,6 +74,8 @@ export interface MatchView {
     /** Escolhas válidas no passo atual (vazio com o draft em andamento = só resta passar). */
     options: string[];
     pickNumber: number | null;
+    /** Vez seguida do mesmo jogador (ex.: B B), confirmável de uma vez; options vale para qualquer passo dela. */
+    run: { size: number; options: string[] };
     actions: { stepIndex: number; type: DraftActionKind; actor: Seat; characterId: string | null }[];
     undo: Record<Seat, { left: number; available: boolean }>;
     clock: null | { limitMs: number; usedMs: Record<Seat, number>; turnStartedAt: string | null; serverNow: string };
@@ -212,6 +214,7 @@ export async function getMatchView(matchId: string, viewer: { id: string; role: 
       picks: state.picks,
       options: state.options,
       pickNumber: state.pickNumber,
+      run: state.run,
       actions: ctx.actions.map((a) => ({ stepIndex: a.stepIndex, type: a.type, actor: a.actorSeat, characterId: a.characterId })),
       undo,
       clock: config.draft.clockSeconds

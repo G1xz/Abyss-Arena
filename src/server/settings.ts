@@ -50,7 +50,7 @@ export type CompetitiveSettings = z.infer<typeof competitiveSettingsSchema>;
 export const DEFAULT_DRAFT: DraftConfig = {
   bansPerPlayer: 3,
   picksPerPlayer: 8,
-  sequence: buildSequence("BANS_FIRST_SNAKE", 3, 8),
+  sequence: buildSequence("SPLIT_SNAKE", 3, 8),
   immunity: DEFAULT_IMMUNITY,
   clockSeconds: 300,
   undoPerPlayer: 1,
@@ -68,8 +68,8 @@ export const DEFAULT_COMPETITIVE_SETTINGS: CompetitiveSettings = {
   maxCharacterCost: 400,
   constellationCurve: DEFAULT_COST_RULES.constellationCurve,
   levelBonus: DEFAULT_COST_RULES.levelBonus,
-  // Regras competitivas: imunidade → 3 bans (A-B-B-A-A-B) → 8 picks em serpente (A-B-B-A ×4).
-  draftPreset: "BANS_FIRST_SNAKE",
+  // Regras competitivas: imunidade → bans A-B-B-A → picks A-BB-AA-BB-A → bans A-B → picks A-BB-AA-BB-A.
+  draftPreset: "SPLIT_SNAKE",
   draft: DEFAULT_DRAFT,
   tiePolicy: "DRAW",
   minResultSeconds: 5,
