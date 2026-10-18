@@ -192,15 +192,19 @@ test("fluxo competitivo completo", async ({ browser }) => {
 
   await admin.goto("/admin/prices");
   await admin.getByTestId("run-analysis").click();
-  await expect(admin.getByTestId("proposal-card").first()).toBeVisible();
+  await expect(admin.getByTestId("proposal-row").first()).toBeVisible();
 
-  // 15. Aprovação de uma proposta (vai para o rascunho).
-  const card = admin.getByTestId("proposal-card").first();
-  const characterName = (await card.locator("p.font-semibold").first().textContent())!.trim();
-  const [oldCost, newCost] = ((await card.locator("span.font-display").first().textContent()) ?? "").match(/\d+/g)!.map(Number);
+  // 15. Revisão em lote: todas vêm marcadas; o admin deixa só a primeira e aprova as selecionadas (vão para o rascunho).
+  const row = admin.getByTestId("proposal-row").first();
+  const characterName = (await row.getAttribute("data-character-name"))!;
+  const oldCost = Number(await row.getAttribute("data-current"));
+  const newCost = Number(await row.getAttribute("data-suggested"));
   expect(newCost).not.toBe(oldCost);
-  await card.getByTestId("proposal-note").fill("Aprovado no teste E2E");
-  await card.getByTestId("proposal-approve").click();
+  await expect(admin.getByTestId("proposal-select-all")).toBeChecked();
+  await admin.getByTestId("proposal-select-all").uncheck();
+  await row.getByTestId("proposal-check").check();
+  await admin.getByTestId("proposal-note").fill("Aprovado no teste E2E");
+  await admin.getByTestId("proposal-approve-all").click();
   await expect(admin.getByTestId("draft-change").filter({ hasText: characterName })).toBeVisible();
 
   // 16. Publicação da nova tabela.
@@ -220,7 +224,7 @@ test("fluxo competitivo completo", async ({ browser }) => {
     return Number(text!.match(/\d+/)![0]);
   };
   // A proposta muda o custo base (C0): afeta os 5★ em C0 dos decks; os 4★ em C6 têm custo fixo na tabela.
-  const withProposal = (fives: string[], total: number) => total + (fives.includes(characterName) ? newCost! - oldCost! : 0);
+  const withProposal = (fives: string[], total: number) => total + (fives.includes(characterName) ? newCost - oldCost : 0);
   expect(await deckTotal(pageA)).toBe(withProposal(A.fives, 50));
   expect(await deckTotal(pageB)).toBe(withProposal(B.fives, 68));
   await admin.goto("/admin/prices");

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { addChallenge, createCycle, setChallengeEnabled, setChallengeHp, updateCycle } from "@/server/abyss/service";
-import { approveProposal, rejectProposal, runBalanceAnalysis } from "@/server/balance/service";
+import { approveProposal, rejectProposal, reviewProposals, runBalanceAnalysis } from "@/server/balance/service";
 import { resolveDispute } from "@/server/matches/results";
 import {
   cancelScheduledVersion,
@@ -34,6 +34,7 @@ describe("permissões administrativas", () => {
       ["setCharacterBalanceLock", () => setCharacterBalanceLock(user, charId, true, null)],
       ["approveProposal", () => approveProposal(user, "x", { note: "abc" })],
       ["rejectProposal", () => rejectProposal(user, "x", { note: "abc" })],
+      ["reviewProposals", () => reviewProposals(user, { note: "abc", approve: [{ proposalId: "x" }] })],
       ["runBalanceAnalysis", () => runBalanceAnalysis({ kind: "MANUAL", generateProposals: true, actor: user })],
       ["resolveDispute", () => resolveDispute(user, "x", { resolution: "DRAW", note: "abcdef" })],
       ["createCycle", () => createCycle(user, { name: "X", startsAt: new Date(), endsAt: new Date(Date.now() + 1000), rules: "regras de teste" })],

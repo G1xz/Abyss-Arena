@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Check, Loader2, Lock, Pencil, Send, Trash2, Undo2, Unlock, X } from "lucide-react";
 import { CharacterIcon, ElementDot } from "@/components/character-card";
@@ -13,12 +13,11 @@ import type { Signal } from "@/domain/balance";
 import { constellationTable, type ConstellationOverrides, type CostRules } from "@/domain/pricing";
 import { cn, formatDate, formatPercent } from "@/lib/utils";
 import {
-  approveProposalAction,
   cancelScheduleAction,
   discardDraftAction,
   publishDraftAction,
-  rejectProposalAction,
   revertPriceAction,
+  reviewProposalsAction,
   setBalanceLockAction,
   setCompetitiveAction,
   setPriceAction,
@@ -167,96 +166,212 @@ export function DraftPanel({
   );
 }
 
-export function ProposalCard({
-  proposal,
-  metrics,
-  bounds,
-}: {
-  proposal: {
-    id: string;
-    character: { id: string; name: string; element: string; rarity: number; iconUrl: string | null };
-    currentCost: number;
-    suggestedCost: number;
-    score: number;
-    confidence: number;
-    explanation: string;
-    signals: Signal[];
-    createdAt: string;
-    stale: boolean;
-  };
-  metrics: { pickRate: number; banRate: number; winRate: number; games: number; matches: number } | null;
-  bounds: { min: number; max: number };
-}) {
+export interface ProposalRow {
+  id: string;
+  character: { id: string; name: string; element: string; rarity: number; iconUrl: string | null };
+  currentCost: number;
+  suggestedCost: number;
+  score: number;
+  confidence: number;
+  explanation: string;
+  signals: Signal[];
+  /** A tabela vigente mudou desde a análise: não dá para aprovar. */
+  stale: boolean;
+  metrics: { pickRate: number; banRate: number; winRate: number; games: number } | null;
+}
+
+/**
+ * Revisão em lote das propostas: todas começam marcadas com o valor sugerido; o admin desmarca ou edita
+ * o que quiser e aprova (ou rejeita) as selecionadas de uma vez, com uma justificativa só.
+ */
+export function ProposalReview({ proposals, bounds }: { proposals: ProposalRow[]; bounds: { min: number; max: number } }) {
   const { pending, run } = useRun();
-  const [cost, setCost] = useState(proposal.suggestedCost);
+  // Guarda só exceções (desmarcadas e valores editados): propostas novas entram marcadas com o sugerido.
+  const [deselected, setDeselected] = useState<Set<string>>(new Set());
+  const [edits, setEdits] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
-  const up = proposal.suggestedCost > proposal.currentCost;
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const reviewable = proposals.filter((p) => !p.stale);
+  const isSelected = (p: ProposalRow) => !p.stale && !deselected.has(p.id);
+  const chosen = proposals.filter(isSelected);
+  const costOf = (p: ProposalRow) => {
+    const raw = edits[p.id];
+    return raw === undefined || raw.trim() === "" ? p.suggestedCost : Number(raw);
+  };
+  const outOfRange = (p: ProposalRow) => {
+    const c = costOf(p);
+    return !Number.isInteger(c) || c < bounds.min || c > bounds.max;
+  };
+  const invalid = chosen.filter(outOfRange);
+  const allSelected = reviewable.length > 0 && reviewable.every(isSelected);
+  const delta = chosen.reduce((sum, p) => sum + (costOf(p) - p.currentCost), 0);
+  const ready = chosen.length > 0 && note.trim().length >= 3 && !pending;
+
+  const toggle = (id: string) =>
+    setDeselected((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const reset = () => {
+    setNote("");
+    setEdits({});
+    setDeselected(new Set());
+  };
+  const approve = () =>
+    run(
+      () => reviewProposalsAction({ note, approve: chosen.map((p) => ({ proposalId: p.id, cost: costOf(p) })), reject: [] }),
+      `${chosen.length} proposta(s) aprovada(s) e enviada(s) ao rascunho`,
+      reset,
+    );
+  const reject = () => run(() => reviewProposalsAction({ note, approve: [], reject: chosen.map((p) => p.id) }), `${chosen.length} proposta(s) rejeitada(s)`, reset);
+
   return (
-    <div className="grid gap-3 rounded-xl border bg-background/40 p-4" data-testid="proposal-card">
-      <div className="flex items-center gap-3">
-        <CharacterIcon character={proposal.character} size={44} />
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{proposal.character.name}</p>
-          <p className="text-xs text-muted-foreground">
-            score {proposal.score.toFixed(2)} · confiança {formatPercent(proposal.confidence, 0)}
-          </p>
+    <div className="grid gap-3" data-testid="proposal-list">
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <THead>
+            <TR>
+              <TH className="w-8">
+                <input
+                  type="checkbox"
+                  className="accent-[var(--primary)]"
+                  checked={allSelected}
+                  onChange={() => setDeselected(allSelected ? new Set(reviewable.map((p) => p.id)) : new Set())}
+                  aria-label={allSelected ? "Desmarcar todas" : "Marcar todas"}
+                  data-testid="proposal-select-all"
+                />
+              </TH>
+              <TH>Personagem</TH>
+              <TH className="text-right">Atual</TH>
+              <TH className="text-right">Sugerido</TH>
+              <TH>Aprovar com</TH>
+              <TH className="text-right">Pick</TH>
+              <TH className="text-right">Ban</TH>
+              <TH className="text-right">Win</TH>
+              <TH className="text-right">Jogos</TH>
+              <TH>Sinais</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {proposals.map((p) => {
+              const selected = isSelected(p);
+              const cost = costOf(p);
+              const edited = cost !== p.suggestedCost;
+              const up = p.suggestedCost > p.currentCost;
+              return (
+                <Fragment key={p.id}>
+                  <TR
+                    className={cn(!selected && "opacity-50", p.stale && "opacity-40")}
+                    data-testid="proposal-row"
+                    data-character-name={p.character.name}
+                    data-current={p.currentCost}
+                    data-suggested={p.suggestedCost}
+                  >
+                    <TD>
+                      <input
+                        type="checkbox"
+                        className="accent-[var(--primary)]"
+                        checked={selected}
+                        disabled={p.stale}
+                        onChange={() => toggle(p.id)}
+                        aria-label={`Incluir ${p.character.name}`}
+                        data-testid="proposal-check"
+                      />
+                    </TD>
+                    <TD>
+                      <button type="button" className="flex items-center gap-2 text-left" onClick={() => setExpanded(expanded === p.id ? null : p.id)} title="Ver explicação">
+                        <CharacterIcon character={p.character} size={28} />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{p.character.name}</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            score {p.score.toFixed(2)} · confiança {formatPercent(p.confidence, 0)}
+                            {p.stale && <span className="text-warning"> · tabela mudou</span>}
+                          </span>
+                        </span>
+                      </button>
+                    </TD>
+                    <TD className="text-right tabular text-muted-foreground">{p.currentCost}</TD>
+                    <TD className={cn("text-right font-semibold tabular", up ? "text-destructive" : "text-success")}>
+                      {p.suggestedCost} <span className="text-[11px] font-normal">({up ? "+" : ""}{p.suggestedCost - p.currentCost})</span>
+                    </TD>
+                    <TD>
+                      <span className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          className={cn("h-8 w-20 text-right tabular", edited && "border-gold/70", selected && outOfRange(p) && "border-destructive")}
+                          min={bounds.min}
+                          max={bounds.max}
+                          value={edits[p.id] ?? String(p.suggestedCost)}
+                          disabled={!selected}
+                          onChange={(e) => setEdits({ ...edits, [p.id]: e.target.value })}
+                          aria-label={`Preço aprovado de ${p.character.name}`}
+                          data-testid="proposal-cost"
+                        />
+                        {edited && (
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setEdits(({ [p.id]: _removed, ...rest }) => rest)}
+                            title={`Voltar ao sugerido (${p.suggestedCost})`}
+                          >
+                            <Undo2 className="size-3.5" />
+                          </button>
+                        )}
+                      </span>
+                    </TD>
+                    <TD className="text-right tabular">{p.metrics ? formatPercent(p.metrics.pickRate) : "—"}</TD>
+                    <TD className="text-right tabular">{p.metrics ? formatPercent(p.metrics.banRate) : "—"}</TD>
+                    <TD className="text-right tabular">{p.metrics ? formatPercent(p.metrics.winRate) : "—"}</TD>
+                    <TD className="text-right tabular">{p.metrics?.games ?? "—"}</TD>
+                    <TD>
+                      <span className="flex flex-wrap gap-1">
+                        {p.signals.map((s) => (
+                          <Badge key={s.code} variant={s.code === "LOW_SAMPLE" || s.code === "EARLY_CYCLE" ? "warning" : "outline"} title={s.detail} className="text-[10px]">
+                            {s.label}
+                          </Badge>
+                        ))}
+                      </span>
+                    </TD>
+                  </TR>
+                  {expanded === p.id && (
+                    <TR>
+                      <TD />
+                      <TD colSpan={9} className="text-xs whitespace-normal text-muted-foreground">
+                        {p.explanation}
+                      </TD>
+                    </TR>
+                  )}
+                </Fragment>
+              );
+            })}
+          </TBody>
+        </Table>
+      </div>
+
+      <div className="sticky bottom-3 z-10 grid gap-2 rounded-xl border border-primary/40 bg-popover/95 p-3 shadow-xl backdrop-blur md:grid-cols-[auto_1fr_auto] md:items-center">
+        <p className="text-sm">
+          <span className="font-semibold">{chosen.length}</span> de {proposals.length} selecionada(s)
+          {chosen.length > 0 && (
+            <span className="text-muted-foreground">
+              {" "}
+              · soma das mudanças {delta > 0 ? "+" : ""}
+              {delta} pts
+            </span>
+          )}
+          {invalid.length > 0 && <span className="block text-xs text-destructive">Valores fora do intervalo {bounds.min}–{bounds.max}: {invalid.map((p) => p.character.name).join(", ")}</span>}
+        </p>
+        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Justificativa da revisão (vale para todas)" data-testid="proposal-note" />
+        <div className="flex gap-2">
+          <Button variant="ghost" disabled={!ready} onClick={reject} data-testid="proposal-reject-all">
+            <X /> Rejeitar selecionadas
+          </Button>
+          <Button disabled={!ready || invalid.length > 0} onClick={approve} data-testid="proposal-approve-all">
+            {pending ? <Loader2 className="animate-spin" /> : <Check />} Aprovar selecionadas
+          </Button>
         </div>
-        <span className={cn("ml-auto flex items-center gap-1 font-display text-xl font-bold tabular", up ? "text-destructive" : "text-success")}>
-          {proposal.currentCost} <ArrowRight className="size-4" /> {proposal.suggestedCost}
-        </span>
-      </div>
-      {metrics && (
-        <dl className="grid grid-cols-4 gap-2 text-center text-xs">
-          {[
-            ["Pick", formatPercent(metrics.pickRate)],
-            ["Ban", formatPercent(metrics.banRate)],
-            ["Win (suav.)", formatPercent(metrics.winRate)],
-            ["Jogos", metrics.games],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-md bg-muted/50 px-1 py-1.5">
-              <dt className="text-muted-foreground">{k}</dt>
-              <dd className="font-semibold tabular">{v}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {proposal.signals.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5">
-          {proposal.signals.map((s) => (
-            <li key={s.code}>
-              <Badge variant={s.code === "LOW_SAMPLE" || s.code === "EARLY_CYCLE" ? "warning" : "outline"} title={s.detail}>
-                {s.label}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="text-xs text-muted-foreground">{proposal.explanation}</p>
-      {proposal.stale && <p className="text-xs text-warning">A tabela vigente mudou desde esta análise; gere uma nova análise.</p>}
-      <div className="grid gap-2 sm:grid-cols-[90px_1fr]">
-        <Input
-          type="number"
-          aria-label="Preço aprovado"
-          min={bounds.min}
-          max={bounds.max}
-          value={cost}
-          onChange={(e) => setCost(Number(e.target.value))}
-          data-testid="proposal-cost"
-        />
-        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Justificativa (obrigatória)" data-testid="proposal-note" />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button size="sm" variant="ghost" disabled={pending || note.trim().length < 3} onClick={() => run(() => rejectProposalAction(proposal.id, { note }), "Proposta rejeitada")}>
-          <X /> Rejeitar
-        </Button>
-        <Button
-          size="sm"
-          disabled={pending || note.trim().length < 3 || proposal.stale}
-          onClick={() => run(() => approveProposalAction(proposal.id, { cost, note }), "Proposta aprovada e enviada ao rascunho")}
-          data-testid="proposal-approve"
-        >
-          <Check /> Aprovar {cost !== proposal.suggestedCost && "(editada)"}
-        </Button>
       </div>
     </div>
   );

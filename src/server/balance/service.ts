@@ -16,7 +16,7 @@ import { prisma, type Db, type Tx } from "../db";
 import { AppError } from "../errors";
 import { requireActivePriceVersion, setDraftPriceTx } from "../pricing/service";
 import { getSettings } from "../settings";
-import { parseInput } from "../validation";
+import { idSchema, parseInput } from "../validation";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -188,54 +188,81 @@ export const reviewProposalSchema = z.object({
   note: z.string().trim().min(3, "Registre a justificativa").max(500),
 });
 
+async function pendingProposal(tx: Tx, proposalId: string) {
+  const proposal = await tx.balanceProposal.findUnique({ where: { id: proposalId }, include: { character: { select: { name: true } } } });
+  if (!proposal) throw new AppError("NOT_FOUND", "Proposta não encontrada");
+  if (proposal.status !== "PENDING") throw new AppError("INVALID_STATE", `A proposta de ${proposal.character.name} já foi revisada`);
+  return proposal;
+}
+
+async function approveProposalTx(tx: Tx, admin: SessionUser, proposalId: string, data: { cost?: number; note: string }) {
+  const proposal = await pendingProposal(tx, proposalId);
+  const active = await tx.priceVersion.findFirst({ where: { status: "ACTIVE" } });
+  if (!active || active.id !== proposal.basePriceVersionId) {
+    throw new AppError("INVALID_STATE", `A tabela vigente mudou desde a análise (${proposal.character.name}). Gere uma nova análise.`);
+  }
+  const cost = data.cost ?? proposal.suggestedCost;
+  await setDraftPriceTx(tx, admin, { characterId: proposal.characterId, cost, justification: data.note }, "SUGGESTED", proposal.id);
+  return tx.balanceProposal.update({
+    where: { id: proposalId },
+    data: { status: "APPROVED", approvedCost: cost, reviewedById: admin.id, reviewedAt: new Date(), reviewNote: data.note },
+  });
+}
+
+async function rejectProposalTx(tx: Tx, admin: SessionUser, proposalId: string, note: string) {
+  const proposal = await pendingProposal(tx, proposalId);
+  const updated = await tx.balanceProposal.update({
+    where: { id: proposalId },
+    data: { status: "REJECTED", reviewedById: admin.id, reviewedAt: new Date(), reviewNote: note },
+  });
+  await writeAuditLog(tx, {
+    adminId: admin.id,
+    action: "PRICE_SUGGESTION_REJECTED",
+    entityType: "Character",
+    entityId: proposal.characterId,
+    reason: note,
+    after: { proposalId, suggestedCost: proposal.suggestedCost },
+  });
+  return updated;
+}
+
 /** Aprova uma proposta: o preço vai para o RASCUNHO da próxima tabela (publicação é outra etapa). */
 export async function approveProposal(admin: SessionUser, proposalId: string, input: unknown, db: Db = prisma) {
   assertAdmin(admin);
   const data = parseInput(reviewProposalSchema, input);
-  return db.$transaction(async (tx) => {
-    const proposal = await tx.balanceProposal.findUnique({ where: { id: proposalId } });
-    if (!proposal) throw new AppError("NOT_FOUND", "Proposta não encontrada");
-    if (proposal.status !== "PENDING") throw new AppError("INVALID_STATE", "Esta proposta já foi revisada");
-    const active = await tx.priceVersion.findFirst({ where: { status: "ACTIVE" } });
-    if (!active || active.id !== proposal.basePriceVersionId) {
-      throw new AppError("INVALID_STATE", "A tabela vigente mudou desde a análise. Gere uma nova análise.");
-    }
-    const cost = data.cost ?? proposal.suggestedCost;
-    await setDraftPriceTx(
-      tx,
-      admin,
-      { characterId: proposal.characterId, cost, justification: data.note },
-      "SUGGESTED",
-      proposal.id,
-    );
-    return tx.balanceProposal.update({
-      where: { id: proposalId },
-      data: { status: "APPROVED", approvedCost: cost, reviewedById: admin.id, reviewedAt: new Date(), reviewNote: data.note },
-    });
-  });
+  return db.$transaction((tx) => approveProposalTx(tx, admin, proposalId, data));
 }
 
 export async function rejectProposal(admin: SessionUser, proposalId: string, input: unknown, db: Db = prisma) {
   assertAdmin(admin);
   const data = parseInput(reviewProposalSchema.pick({ note: true }), input);
-  return db.$transaction(async (tx) => {
-    const proposal = await tx.balanceProposal.findUnique({ where: { id: proposalId } });
-    if (!proposal) throw new AppError("NOT_FOUND", "Proposta não encontrada");
-    if (proposal.status !== "PENDING") throw new AppError("INVALID_STATE", "Esta proposta já foi revisada");
-    const updated = await tx.balanceProposal.update({
-      where: { id: proposalId },
-      data: { status: "REJECTED", reviewedById: admin.id, reviewedAt: new Date(), reviewNote: data.note },
-    });
-    await writeAuditLog(tx, {
-      adminId: admin.id,
-      action: "PRICE_SUGGESTION_REJECTED",
-      entityType: "Character",
-      entityId: proposal.characterId,
-      reason: data.note,
-      after: { proposalId, suggestedCost: proposal.suggestedCost },
-    });
-    return updated;
-  });
+  return db.$transaction((tx) => rejectProposalTx(tx, admin, proposalId, data.note));
+}
+
+export const batchReviewSchema = z
+  .object({
+    note: z.string().trim().min(3, "Registre a justificativa").max(500),
+    approve: z.array(z.object({ proposalId: idSchema, cost: z.coerce.number().int().optional() })).max(500).default([]),
+    reject: z.array(idSchema).max(500).default([]),
+  })
+  .refine((v) => v.approve.length + v.reject.length > 0, { message: "Selecione ao menos uma proposta" })
+  .refine((v) => !v.approve.some((a) => v.reject.includes(a.proposalId)), { message: "Uma proposta não pode ser aprovada e rejeitada ao mesmo tempo" });
+
+/**
+ * Revisão em lote: aprova (com o valor sugerido ou editado) e/ou rejeita várias propostas de uma vez,
+ * com a mesma justificativa. Tudo numa transação: se uma falhar, nada muda.
+ */
+export async function reviewProposals(admin: SessionUser, input: unknown, db: Db = prisma) {
+  assertAdmin(admin);
+  const data = parseInput(batchReviewSchema, input);
+  return db.$transaction(
+    async (tx) => {
+      for (const item of data.approve) await approveProposalTx(tx, admin, item.proposalId, { cost: item.cost, note: data.note });
+      for (const id of data.reject) await rejectProposalTx(tx, admin, id, data.note);
+      return { approved: data.approve.length, rejected: data.reject.length };
+    },
+    { timeout: 60_000 },
+  );
 }
 
 /** Última métrica OVERALL de cada personagem (painéis). */

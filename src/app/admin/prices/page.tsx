@@ -10,7 +10,7 @@ import { prisma } from "@/server/db";
 import { parseOverrides } from "@/domain/pricing";
 import { costRulesOf, getSettings } from "@/server/settings";
 import { AnalysisButtons } from "../analysis-buttons";
-import { CharacterPriceTable, DraftPanel, ProposalCard } from "./price-ui";
+import { CharacterPriceTable, DraftPanel, ProposalReview } from "./price-ui";
 
 export const metadata: Metadata = { title: "Preços e propostas" };
 
@@ -80,38 +80,33 @@ export default async function AdminPricesPage() {
         <CardHeader>
           <CardTitle>Propostas pendentes ({proposals.length})</CardTitle>
           <CardDescription>
-            Geradas pelo BalanceEngine. Aprovar envia o preço ao rascunho; você pode editar o valor sugerido. Detalhes do algoritmo em docs/BALANCEAMENTO.md.
+            Geradas pelo BalanceEngine. Todas vêm marcadas com o valor sugerido: ajuste o que quiser, desmarque o que não concordar e aprove as
+            selecionadas de uma vez (elas vão para o rascunho). Clique no personagem para ver a explicação. Detalhes do algoritmo em docs/BALANCEAMENTO.md.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {proposals.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma proposta pendente.</p>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2" data-testid="proposal-list">
-              {proposals.map((p) => {
+            <ProposalReview
+              bounds={{ min: settings.minCharacterCost, max: settings.maxCharacterCost }}
+              proposals={proposals.map((p) => {
                 const m = latest.metrics.get(p.characterId);
                 const details = p.signals as unknown as { signals: Signal[] };
-                return (
-                  <ProposalCard
-                    key={p.id}
-                    proposal={{
-                      id: p.id,
-                      character: p.character,
-                      currentCost: p.currentCost,
-                      suggestedCost: p.suggestedCost,
-                      score: p.score,
-                      confidence: p.confidence,
-                      explanation: p.explanation,
-                      signals: details.signals ?? [],
-                      createdAt: p.createdAt.toISOString(),
-                      stale: p.basePriceVersionId !== active?.id,
-                    }}
-                    metrics={m ? { pickRate: m.pickRate, banRate: m.banRate, winRate: m.smoothedWinRate, games: m.games, matches: m.matches } : null}
-                    bounds={{ min: settings.minCharacterCost, max: settings.maxCharacterCost }}
-                  />
-                );
+                return {
+                  id: p.id,
+                  character: p.character,
+                  currentCost: p.currentCost,
+                  suggestedCost: p.suggestedCost,
+                  score: p.score,
+                  confidence: p.confidence,
+                  explanation: p.explanation,
+                  signals: details.signals ?? [],
+                  stale: p.basePriceVersionId !== active?.id,
+                  metrics: m ? { pickRate: m.pickRate, banRate: m.banRate, winRate: m.smoothedWinRate, games: m.games } : null,
+                };
               })}
-            </div>
+            />
           )}
           {reviewed.length > 0 && (
             <details className="mt-4">

@@ -9,7 +9,7 @@ import { writeAuditLog } from "@/server/audit";
 import { assertAdmin } from "@/server/auth/accounts";
 import { getCurrentUser } from "@/server/auth/next";
 import type { SessionUser } from "@/server/auth/session";
-import { approveProposal, rejectProposal, runBalanceAnalysis } from "@/server/balance/service";
+import { reviewProposals, runBalanceAnalysis } from "@/server/balance/service";
 import { syncCatalog } from "@/server/catalog/sync";
 import { prisma } from "@/server/db";
 import { AppError, toErrorResult, type ActionResult } from "@/server/errors";
@@ -71,16 +71,9 @@ export async function discardDraftAction() {
   return run((u) => discardDraft(u));
 }
 
-export async function approveProposalAction(proposalId: string, input: { cost?: number; note: string }) {
-  return run(async (u) => {
-    await approveProposal(u, proposalId, input);
-  });
-}
-
-export async function rejectProposalAction(proposalId: string, input: { note: string }) {
-  return run(async (u) => {
-    await rejectProposal(u, proposalId, input);
-  });
+/** Aprova e/ou rejeita várias propostas de uma vez (valores editados vão em `cost`). */
+export async function reviewProposalsAction(input: { note: string; approve: { proposalId: string; cost?: number }[]; reject: string[] }) {
+  return run((u) => reviewProposals(u, input));
 }
 
 export async function setCompetitiveAction(characterId: string, enabled: boolean) {

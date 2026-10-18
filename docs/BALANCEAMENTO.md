@@ -116,8 +116,8 @@ O balanceamento não está atrelado a ciclos de 30 dias: a janela histórica e a
 
 ## Fluxo administrativo
 
-1. Revisar as propostas pendentes em **Admin → Preços e propostas** (métricas, sinais, explicação).
-2. **Aprovar** (com o preço sugerido ou editado) ou **rejeitar**. A justificativa é obrigatória.
+1. Revisar as propostas pendentes em **Admin → Preços e propostas**: uma tabela com todos os personagens que tiveram mudança sugerida (preço atual, sugerido, métricas e sinais; clique no personagem para ver a explicação). Todas vêm marcadas com o valor sugerido.
+2. Ajustar o valor de quem quiser, desmarcar o que não concordar e **aprovar** (ou **rejeitar**) as selecionadas de uma vez, com uma justificativa para o lote. A revisão é tudo ou nada: se alguma proposta não puder ser aprovada, nenhuma muda. As desmarcadas continuam pendentes.
 3. Opcional: definir preços manualmente, liberar personagens e bloquear sugestões.
 4. **Publicar** a nova versão agora ou agendar. A versão recebe número sequencial; a anterior é arquivada.
 5. Partidas já iniciadas continuam com os custos dos seus snapshots.

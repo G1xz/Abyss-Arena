@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { approveProposal, rejectProposal, runBalanceAnalysis } from "@/server/balance/service";
+import { approveProposal, rejectProposal, reviewProposals, runBalanceAnalysis } from "@/server/balance/service";
 import { prisma } from "@/server/db";
 import { getActivePriceVersion, publishDraft, setCharacterBalanceLock } from "@/server/pricing/service";
 import { saveSettings, DEFAULT_BALANCE_SETTINGS } from "@/server/settings";
@@ -79,6 +79,45 @@ describe("métricas e propostas", () => {
 
     await publishDraft(world.admin, {});
     await expect(approveProposal(world.admin, p3!.id, { note: "tarde demais" })).rejects.toMatchObject({ code: "INVALID_STATE" });
+  });
+
+  it("revisão em lote: aprova várias (com valor editado) e rejeita outras de uma vez; se uma falhar, nada muda", async () => {
+    await sensitiveSettings();
+    await playCompletedMatch(world);
+    await runBalanceAnalysis({ kind: "MANUAL", generateProposals: true });
+    const pending = await prisma.balanceProposal.findMany({ where: { status: "PENDING" }, orderBy: { score: "desc" } });
+    expect(pending.length).toBeGreaterThanOrEqual(3);
+    const [p1, p2, p3, ...rest] = pending;
+
+    // Um item inválido (proposta inexistente) desfaz o lote inteiro.
+    await expect(
+      reviewProposals(world.admin, { note: "Lote com erro", approve: [{ proposalId: p1!.id }, { proposalId: "inexistente-123" }] }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(await prisma.balanceProposal.count({ where: { status: "PENDING" } })).toBe(pending.length);
+    expect(await prisma.priceVersion.count({ where: { status: "DRAFT" } })).toBe(0);
+
+    await expect(reviewProposals(world.admin, { note: "Nada", approve: [], reject: [] })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(reviewProposals(world.admin, { note: "Conflito", approve: [{ proposalId: p1!.id }], reject: [p1!.id] })).rejects.toMatchObject({ code: "VALIDATION" });
+
+    const result = await reviewProposals(world.admin, {
+      note: "Revisão semanal",
+      approve: [{ proposalId: p1!.id }, { proposalId: p2!.id, cost: 33 }],
+      reject: [p3!.id],
+    });
+    expect(result).toEqual({ approved: 2, rejected: 1 });
+
+    const draft = await prisma.priceVersion.findFirstOrThrow({ where: { status: "DRAFT" }, include: { prices: true, changes: true } });
+    expect(draft.prices.find((p) => p.characterId === p1!.characterId)!.cost).toBe(p1!.suggestedCost);
+    expect(draft.prices.find((p) => p.characterId === p2!.characterId)!.cost).toBe(33);
+    expect(draft.changes.every((c) => c.justification === "Revisão semanal" && c.source === "SUGGESTED")).toBe(true);
+    const reviewed = await prisma.balanceProposal.findMany({ where: { id: { in: [p1!.id, p2!.id, p3!.id] } } });
+    expect(Object.fromEntries(reviewed.map((r) => [r.id, [r.status, r.approvedCost]]))).toEqual({
+      [p1!.id]: ["APPROVED", p1!.suggestedCost],
+      [p2!.id]: ["APPROVED", 33],
+      [p3!.id]: ["REJECTED", null],
+    });
+    // As demais continuam pendentes.
+    expect(await prisma.balanceProposal.count({ where: { status: "PENDING" } })).toBe(rest.length);
   });
 
   it("personagens bloqueados não recebem sugestões automáticas", async () => {
